@@ -7,7 +7,7 @@ g = 9.81 # m/s**2
 cor = 0.2 # unitless
 # realistically I should model the ball as a spring mass damper system
 # I have code that does that on my pc but forgot to upload it to the repo
-
+ballMass = 1 #kg #just for now
 # The time step for the animation.
 dt = 0.005
 xMin = 0 # m
