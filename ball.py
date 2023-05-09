@@ -21,27 +21,27 @@ plotlen = 10
 for i in range(plotlen):
 
     ballStart = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMax/2, yMax)] # initial positi#on of ball
-    ballInitVelocity = [random.uniform(-1,1),0] # initial velocity of ball
+    ballInitVelocity = [random.uniform(-2,2),0] # initial velocity of ball
     dronePos = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMin+1, yMax/2)] # initial position of drone
     droneInitVelocity = [0,0] # initial velocity of drone
 
     def get_pos(t=0):
         """Math for position of the ball"""
         x, y, vx, vy = ballStart[0], ballStart[1], ballInitVelocity[0], ballInitVelocity[1]
-        while x < xMax:
+        while xMin < x < xMax:
             t += dt
             x += vx * dt
             y += vy * dt
             vy -= g * dt
-            if (dronePos[1]-0.01 < y < dronePos[1]) and (dronePos[0]-0.25<= x <=dronePos[0]+0.25):
+            if (dronePos[1]-0.1 < y < dronePos[1]) and (dronePos[0]-0.25 <= x <= dronePos[0]+0.25):
                 # if the ball is intersecting the drone, 'catch' the ball
                 y = dronePos[1]
                 vy = -vy * cor
-                vx =0
-            elif (y< yMin):
+                vx -= vx * 0.25 # just to kind of slow the rolling down
+            elif (y < yMin):
                 y = yMin
                 vy = -vy * cor
-                vx -= vx * 0.5
+                vx -= vx * 0.25 # just to kind of slow the rolling down
             yield x, y
 
     def init():
@@ -52,7 +52,7 @@ for i in range(plotlen):
         ax.set_ylabel('$y$ (m)')
         line.set_data(xdata, ydata)
         ball.set_center((ballStart[0], ballStart[1]))
-        height_text.set_text(f'Height: {ballStart[1]:.1f} m')
+        height_text.set_text(f'Current Height: {ballStart[1]:.1f} m')
         return line, ball, height_text
 
     def animate(pos):
@@ -62,7 +62,7 @@ for i in range(plotlen):
         ydata.append(y)
         line.set_data(xdata, ydata)
         ball.set_center((x, y))
-        height_text.set_text(f'Height: {y:.1f} m')
+        height_text.set_text(f'Current Height: {y:.1f} m')
         return  line, ball, height_text
 
     # Set up a new Figure, with equal aspect ratio so the ball appears round.
@@ -80,7 +80,7 @@ for i in range(plotlen):
     originText = ax.text(ballStart[0]+0.15, ballStart[1]-0.05, f'Ball Initial Position')
     # drawing the ball being dropped
     ball = plt.Circle((ballStart[0], ballStart[1]), 0.08)
-    height_text = ax.text(xMax*0.5, ballStart[1]*0.8, f'Height: {ballStart[1]:.1f} m')
+    height_text = ax.text(xMin+0.1, yMin+0.1, f'Current Height: {ballStart[1]:.1f} m')
     ax.add_patch(ball)
     xdata, ydata = [], []
 
