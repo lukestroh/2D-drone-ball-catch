@@ -16,6 +16,7 @@ yMin = 0 # m
 yMax = 4 # m
 plotlen = 10
 
+
 # multiple iterations just to show that the drone does catch the ball
 for i in range(plotlen):
 
@@ -32,7 +33,7 @@ for i in range(plotlen):
             x += vx * dt
             y += vy * dt
             vy -= g * dt
-            if (y == dronePos[1]) and (dronePos[0]-0.25<= x <=dronePos[0]+0.25):
+            if (y < dronePos[1]) and (y > yMin) and (dronePos[0]-0.25<= x <=dronePos[0]+0.25):
                 # if the ball is intersecting the drone, 'catch' the ball
                 y = dronePos[1]
                 vy = -vy * cor
