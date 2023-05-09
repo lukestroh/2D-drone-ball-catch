@@ -20,7 +20,7 @@ plotlen = 10
 for i in range(plotlen):
 
     ballStart = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMax/2, yMax)] # initial positi#on of ball
-    ballInitVelocity = [0,0] # initial velocity of ball
+    ballInitVelocity = [random.uniform(-1,1),0] # initial velocity of ball
     dronePos = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMin+1, yMax/2)] # initial position of drone
     droneInitVelocity = [0,0] # initial velocity of drone
 
@@ -32,13 +32,15 @@ for i in range(plotlen):
             x += vx * dt
             y += vy * dt
             vy -= g * dt
-            if (y < dronePos[1]) and (dronePos[0]-0.25<= x <=dronePos[0]+0.25):
+            if (y == dronePos[1]) and (dronePos[0]-0.25<= x <=dronePos[0]+0.25):
                 # if the ball is intersecting the drone, 'catch' the ball
                 y = dronePos[1]
                 vy = -vy * cor
+                vx =0
             elif (y< yMin):
                 y = yMin
                 vy = -vy * cor
+                vx -= vx * 0.5
             yield x, y
 
     def init():
