@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import random
 
 g = 9.81 # m/s**2
 # The coefficient of restitution for bounces (-v_up/v_down).
@@ -15,9 +16,9 @@ yMin = 0 # m
 yMax = 4 # m
 
 
-ballStart = [2,3] # initial positi#on of ball
+ballStart = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMax/2, yMax)] # initial positi#on of ball
 ballInitVelocity = [0,0] # initial velocity of ball
-dronePos = [2, 1] # initial position of drone
+dronePos = [random.uniform(xMin+0.5, xMax+0.5),random.uniform(yMin, yMax/2)] # initial position of drone
 droneInitVelocity = [0,0] # initial velocity of drone
 
 def get_pos(t=0):
@@ -28,10 +29,13 @@ def get_pos(t=0):
         x += vx * dt
         y += vy * dt
         vy -= g * dt
-        if (y < dronePos[1]):
+        if (y < dronePos[1]) and (x == dronePos[0]):
             # if the ball is intersecting the drone, 'catch' the ball
             y = dronePos[1]
-            vy = -vy * cor 
+            vy = -vy * cor
+        elif (y< yMin):
+            y = yMin
+            vy = -vy * cor
         yield x, y
 
 def init():
@@ -61,9 +65,9 @@ ax.set_aspect('equal')
 
 line, = ax.plot([], [], lw=.5, color='red') # this is code if we want to map the ball trajectory
 # drawing the drone with no motion yet :)
-drone = plt.plot([1.75, 2.25], [1,1], color='black')
-drone_prop_left = plt.plot([1.75, 1.75], [0.95,1.1], color='black')
-drone_prop_right = plt.plot([2.25, 2.25], [0.95,1.1], color='black')
+drone = plt.plot([dronePos[0]-0.25, dronePos[0]+0.25], [dronePos[1],dronePos[1]], color='black')
+drone_prop_left = plt.plot([dronePos[0]-0.25, dronePos[0]-0.25], [dronePos[1]-0.05,dronePos[1]+0.1], color='black')
+drone_prop_right = plt.plot([dronePos[0]+0.25, dronePos[0]+0.25], [dronePos[1]-0.05,dronePos[1]+0.1], color='black')
 # draw a point at the ball's initial position
 ballOrigin = plt.plot(ballStart[0], ballStart[1], 'r.')
 originText = ax.text(ballStart[0]+0.15, ballStart[1]-0.05, f'Ball Initial Position')
