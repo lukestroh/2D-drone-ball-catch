@@ -21,7 +21,7 @@ plotlen = 10
 for i in range(plotlen):
 
     ballStart = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMax/2, yMax)] # initial positi#on of ball
-    ballInitVelocity = [random.uniform(-2,2),0] # initial velocity of ball
+    ballInitVelocity = [random.uniform(-2,2),random.uniform(0,2)] # initial velocity of ball
     dronePos = [random.uniform(xMin+0.5, xMax-0.5),random.uniform(yMin+1, yMax/2)] # initial position of drone
     droneInitVelocity = [0,0] # initial velocity of drone
 
