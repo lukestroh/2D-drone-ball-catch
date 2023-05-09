@@ -80,7 +80,7 @@ for i in range(plotlen):
     originText = ax.text(ballStart[0]+0.15, ballStart[1]-0.05, f'Ball Initial Position')
     # drawing the ball being dropped
     ball = plt.Circle((ballStart[0], ballStart[1]), 0.08)
-    height_text = ax.text(xMin+0.1, yMin+0.1, f'Current Height: {ballStart[1]:.1f} m')
+    height_text = ax.text(xMin+0.1, yMax-0.2, f'Current Height: {ballStart[1]:.1f} m')
     ax.add_patch(ball)
     xdata, ydata = [], []
 
