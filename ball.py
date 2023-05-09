@@ -37,11 +37,11 @@ for i in range(plotlen):
                 # if the ball is intersecting the drone, 'catch' the ball
                 y = dronePos[1]
                 vy = -vy * cor
-                vx -= vx * 0.25 # just to kind of slow the rolling down
+                vx -= vx * 0.35 # just to kind of slow the rolling down
             elif (y < yMin):
                 y = yMin
                 vy = -vy * cor
-                vx -= vx * 0.25 # just to kind of slow the rolling down
+                vx -= vx * 0.35 # just to kind of slow the rolling down
             yield x, y
 
     def init():
