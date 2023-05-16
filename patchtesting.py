@@ -47,13 +47,16 @@ def get_pos(t=0):
         x += vx * dt
         y += vy * dt
         if drone_vertices[0][0] != 2 and drone_vertices[0][1] != 1:
-            vx -= 0.1
+            vx = vx
+        elif drone_vertices[0][0] == 2 and drone_vertices[0][1] == 1:
+            vx = 0
+            x = 2
     yield x, y
 
 def init():
     """Initialize the animation figure."""
-    ax.set_xlim(0, 5)
-    ax.set_ylim(0, 5)
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
     ax.set_xlabel('$x$ (m)')
     ax.set_ylabel('$y$ (m)')
     drone.set_xy(drone_vertices)
@@ -67,7 +70,7 @@ def animate(pos):
     x, y = pos
     xdata.append(x)
     ydata.append(y)
-    drone_vertices[:,0] += x
+    drone_vertices[:, 0]+=x
     #drone.set_data(xdata, ydata)
     drone.set_xy(drone_vertices)
     #line.set_data(xdata, ydata)
@@ -80,5 +83,5 @@ ax.set_xbound(0, 10)
 ax.set_ybound(0,10)
 ax.add_patch(drone)
 ani = animation.FuncAnimation(fig, animate, get_pos, blit=True,
-                    interval=1000, repeat=False, init_func=init)
+                    interval=1000*0.1, repeat=False, init_func=init)
 plt.show()
