@@ -89,5 +89,4 @@ for i in range(plotlen):
     ani = animation.FuncAnimation(fig, animate, get_pos, blit=True,
                         interval=interval, repeat=False, init_func=init)
     plt.show()
-    plotlen -1
     plt.close(fig)
