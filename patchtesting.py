@@ -28,7 +28,7 @@ drone_vertices = np.array([
 [x0-frameThickness+frameWidth+(1*propWidth)+frameThickness,  y0]])
 drone = patches.Polygon(drone_vertices)
 
-def draw_drone(self):
+def draw_drone():
     """Code for plotting a static image of the drone"""
     fig, ax = plt.subplots()
     ax.set_xbound(0, 5)
@@ -41,13 +41,14 @@ def draw_drone(self):
 
 xdata, ydata = [], []
 def get_pos(t=0):
-    x, y, vx, vy, dt = 1, 1, 10, 0, 0.1 #initial positions and velocities
-    while 0< x < 5:
+    x, y, vx, vy, dt = 1, 1, 1, 0, 0.1 #initial positions and velocities
+    while 0 < x < 10:
         t += dt
         x += vx * dt
         y += vy * dt
         if drone_vertices[0][0] != 2 and drone_vertices[0][1] != 1:
             vx = vx
+            x += vx*dt
         elif drone_vertices[0][0] == 2 and drone_vertices[0][1] == 1:
             vx = 0
             x = 2
@@ -71,11 +72,8 @@ def animate(pos):
     xdata.append(x)
     ydata.append(y)
     drone_vertices[:, 0]+=x
-    #drone.set_data(xdata, ydata)
-    drone.set_xy(drone_vertices)
-    #line.set_data(xdata, ydata)
-    #ball.set_center((x, y))
-    #height_text.set_text(f'Current Height: {y:.1f} m')
+    drone.set_xy(drone_vertices) # for some reason this only updates once rather than
+    # continuously
     return  drone,
 
 fig, ax = plt.subplots()
@@ -83,5 +81,5 @@ ax.set_xbound(0, 10)
 ax.set_ybound(0,10)
 ax.add_patch(drone)
 ani = animation.FuncAnimation(fig, animate, get_pos, blit=True,
-                    interval=1000*0.1, repeat=False, init_func=init)
+                    interval=1000*0.1, init_func=init)
 plt.show()
