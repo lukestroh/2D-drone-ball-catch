@@ -1,7 +1,7 @@
-from math import sin, cos
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
 import matplotlib.pyplot as plt
+import numpy as np
 # source https://cookierobotics.com/052/
 
 
@@ -13,7 +13,7 @@ class Drone():
             body_width,
             body_length,
             arm_length
-            ) -> None:
+        ) -> None:
         
         # Constants
         self.g = sc.g   # Gravitational acceleration (m/s^2)
@@ -21,6 +21,8 @@ class Drone():
         self.h = body_height
         self.l = body_length
         self.w = body_width
+        self.max_motor_thrust = 1.7658
+
         # Mass moments of inertia (kg*m^2)
         self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
@@ -37,10 +39,7 @@ class Drone():
         t     : Time (seconds), scalar
         return: Desired position & velocity & acceleration, y, z, vy, vz, ay, az
         """
-        if t < 1:
-            y = 0
-        else:
-            y = 3
+        y = 3
         z = 3
         vy = 0
         vz = 0
@@ -87,7 +86,7 @@ class Drone():
 
         u1      u2
         _____    _____
-        |________|
+          |________|
 
         F = u1 + u2
         M = (u2 - u1)*L
@@ -95,7 +94,7 @@ class Drone():
         u1 = 0.5*(F - M/self.L)
         u2 = 0.5*(F + M/self.L)
         
-        if u1 < 0 or u1 > 1.7658 or u2 < 0 or u2 > 1.7658:
+        if u1 < 0 or u1 > self.max_motor_thrust or u2 < 0 or u2 > self.max_motor_thrust:
             print(f'motor saturation {u1} {u2}')
         
         u1_clamped = min(max(0, u1), 1.7658)
@@ -104,7 +103,6 @@ class Drone():
         M_clamped = (u2_clamped - u1_clamped) * self.L
 
         return F_clamped, M_clamped
-
 
 
     def xdot(self, t, x):
@@ -124,8 +122,8 @@ class Drone():
         return [x[3],
                 x[4],
                 x[5],
-                -F_clamped * sin(x[2]) / self.m,
-                F_clamped * cos(x[2]) / self.m - self.g,
+                -F_clamped * np.sin(x[2]) / self.m,
+                F_clamped * np.cos(x[2]) / self.m - self.g,
                 M_clamped / self.Ixx]
 
 
@@ -143,7 +141,12 @@ def main():
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
-    sol = solve_ivp(drone.xdot, t_span, x0)
+    sol = solve_ivp(
+        fun=drone.xdot, 
+        t_span=t_span,
+        y0=x0,
+        method="RK45"
+    )
 
 
     # Plot
