@@ -1,7 +1,7 @@
 from math import sin, cos
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-
+# source https://cookierobotics.com/052/
 
 # Constants
 g     = 9.81    # Gravitational acceleration (m/s^2)
