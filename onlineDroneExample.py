@@ -2,6 +2,8 @@ from math import sin, cos
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
 import matplotlib.pyplot as plt
+import numpy as np
+import control as ct
 # source https://cookierobotics.com/052/
 
 
@@ -12,7 +14,11 @@ class Drone():
             body_height,
             body_width,
             body_length,
-            arm_length
+            arm_length,
+            dt,
+            ball_coordinates,
+            drone_coordinates,
+            ball_velocities
             ) -> None:
         
         # Constants
@@ -25,29 +31,57 @@ class Drone():
         self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
-
         self.L = arm_length
+        self.ball_coordinates = ball_coordinates
+        # to start, the x drone coord should be the same as the x of the ball coord
+        self.ball_velocities = ball_velocities
+        self.dt = dt
+        self.drone_coordinates = (self.ball_coordinates[0], drone_coordinates[1])
+        # using tuples bc i know you prefer those :^)
         return
 
     def trajectory(self, t):
         """
         Returns the desired position, velocity, and acceleration at a given time.
-        Trajectory is a step (y changes from 0 to 0.5 at t=1)
+        Trajectory is a step (y changes from 0 to yBall at t=1)
 
         t     : Time (seconds), scalar
         return: Desired position & velocity & acceleration, y, z, vy, vz, ay, az
         """
         if t < 1:
-            y = 0
+            x = 0
+            # this loop basically starts the drone from a hover
         else:
-            y = 3
-        z = 3
+            x = self.ball_coordinates[0]
+            # set the goal point of the drone to be the same as the ball
+        y = self.drone_coordinates[1] # arbitrary initial height of the drone
+        vx = 0
         vy = 0
-        vz = 0
+        ax = 0
         ay = 0
-        az = 0
-
-        return y, z, vy, vz, ay, az
+        return x,y,vx,vy,ax,ay
+    
+    def ball_trajectory(self, t):
+        """
+        Step iteration of the ball falling in space
+        """
+        # start at some initial point with initial velocity values of 0
+        # have ball fall bc gravity
+        # initial x is same for drone and ball so ball just falls straight downwards
+        x, y, vx, vy = self.ball_coordinates[0], self.ball_coordinates[1], 0, 0 # initial conditions for the ball
+        t += self.dt
+        x += vx * self.dt
+        y += vy * self.dt
+        vy -= self.g * self.dt
+        if (self.drone_coordinates[1]-0.1<y<self.drone_coordinates[1]) and (self.drone_coordinates[0]-0.25<=x<=self.drone_coordinates[0]+0.25):
+            y = self.drone_coordinates[1]
+            vy = 0
+        elif (y<=0):
+            y = 0
+            vy = 0
+            vx = 0
+        self.ball_coordinates = (x,y)
+        yield x, y
 
 
 
@@ -65,6 +99,7 @@ class Drone():
         az_des: desired z acceleration
         return: Force and moment to achieve desired state
         """
+        # this section needs to be redone. feedforward is a no-no
         Kp_y   = 0.4
         Kv_y   = 1.0
         Kp_z   = 0.4
@@ -77,17 +112,26 @@ class Drone():
         M = self.Ixx * (Kv_phi * (-x[5]) + Kp_phi * (phi_c - x[2]))
 
         return F, M
-
-
-
+    
+    def linear_controller(self):
+        A = np.array([[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1],[0,0,-self.g,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]])
+        # Ax+Bu is essentially dx/dt
+        B = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],[1/self.m,0,-1], [0,1/self.Ixx,0]])
+        C = np.array([[1, 0, 0, 0,0,0],[0,1,0,0,0,0]])
+        D = 0
+        s = ct.StateSpace(A,B,C,D)
+        x0 = np.array([2,2,0,0,0,0])
+        imp = ct.impulse_response(s)
+        return imp
+    
     def clamp(self, F, M):
         """
         Limit force and moment to prevent saturating the motor
         Clamp F and M such that u1 and u2 are between 0 and 1.7658
 
-        u1      u2
+          u1      u2
         _____    _____
-        |________|
+          |________|
 
         F = u1 + u2
         M = (u2 - u1)*L
@@ -116,8 +160,8 @@ class Drone():
         x     : Current state, [y, z, phi, vy, vz, phidot]
         return: First derivative of state, [vy, vz, phidot, ay, az, phidotdot]
         """
-        y_des, z_des, vy_des, vz_des, ay_des, az_des = self.trajectory(t)
-        F, M = self.controller(x, y_des, z_des, vy_des, vz_des, ay_des, az_des)
+        x_des, y_des, vx_des, vy_des, ax_des, ay_des = self.trajectory(t)
+        F, M = self.controller(x, x_des, y_des, vx_des, vy_des, ax_des, ay_des)
         F_clamped, M_clamped = self.clamp(F, M)
 
         # First derivative, xdot = [vy, vz, phidot, ay, az, phidotdot]
@@ -139,26 +183,31 @@ def main():
         body_height=2,
         body_width=2,
         body_length=2,
-        arm_length=0.086
+        arm_length=0.086,
+        dt=0.1,
+        ball_coordinates=(2,5),
+        drone_coordinates=(2,2),
+        ball_velocities=(0,0)
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
-    sol = solve_ivp(drone.xdot, t_span, x0)
-
-
+    #sol = solve_ivp(drone.xdot, t_span, x0)
+    d = drone.linear_controller()
+    #print(d[0])
     # Plot
     fig, axs = plt.subplots()
-    axs.plot(sol.y[0], sol.y[1]) # plot of drone's trajectory
-    axs.set_xlabel("lateral position (m)")
-    axs.set_ylabel("vertical position (m)")
-    axs.set_xbound(0,5)
-    axs.set_ybound(0,5)
-    axs.set_title("Drone path from start point to end point")
+    axs.plot(d[0], d[1][1])
+    #axs.plot(sol.y[0], sol.y[1]) # plot of drone's trajectory
+    #axs.set_xlabel("lateral position (m)")
+    #axs.set_ylabel("vertical position (m)")
+    #axs.set_xbound(0,5)
+    #axs.set_ybound(0,5)
+    #axs.set_title("Drone path from start point to end point")
     #axs[1].plot(sol.t, sol.y[1]) # z   vs t
     #axs[2].plot(sol.t, sol.y[2]) # phi vs t
-    plt.show()
+    #plt.show()
 
-    return
+    #return
 
 
 
