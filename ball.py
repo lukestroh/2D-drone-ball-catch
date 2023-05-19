@@ -5,12 +5,12 @@ import scipy.constants as sc
 class Ball():
     def __init__(
             self,
-            start_x,
-            start_y,
-            start_vx,
-            start_vy,
-            ball_mass,
-            ball_radius,
+            start_x: float,
+            start_y: float,
+            start_vx: float,
+            start_vy: float,
+            ball_mass: float,
+            ball_radius: float,
 
             dt
         ):

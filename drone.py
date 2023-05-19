@@ -181,7 +181,7 @@ class Drone():
 
         # Get step response
         time = np.linspace(0, 20, 1000)
-        x0 = np.array([2,2,0,0,0,0])
+        x0 = self.state
         data = ct.step_response(sys=system, T=time, X0=x0)
 
         return data
@@ -212,10 +212,11 @@ def main():
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
     #sol = solve_ivp(drone.xdot, t_span, x0)
     d = drone.linear_controller()
-    #print(d[0])
+
+
     # Plot
     fig, axs = plt.subplots()
-    axs.plot(d[0], d[1][1])
+    axs.plot(d.time, d.outputs[0][0])
 
 #     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
 #     sol = solve_ivp(
