@@ -1,4 +1,3 @@
-from math import sin, cos
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
 import matplotlib.pyplot as plt
@@ -16,10 +15,8 @@ class Drone():
             body_length,
             arm_length,
             dt,
-            ball_coordinates,
             drone_coordinates,
-            ball_velocities
-            ) -> None:
+        ) -> None:
         
         # Constants
         self.g = sc.g   # Gravitational acceleration (m/s^2)
@@ -32,12 +29,9 @@ class Drone():
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
         self.L = arm_length
-        self.ball_coordinates = ball_coordinates
+
         # to start, the x drone coord should be the same as the x of the ball coord
-        self.ball_velocities = ball_velocities
         self.dt = dt
-        self.drone_coordinates = (self.ball_coordinates[0], drone_coordinates[1])
-        # using tuples bc i know you prefer those :^)
         return
 
     def trajectory(self, t):
@@ -61,29 +55,6 @@ class Drone():
         ay = 0
         return x,y,vx,vy,ax,ay
     
-    def ball_trajectory(self, t):
-        """
-        Step iteration of the ball falling in space
-        """
-        # start at some initial point with initial velocity values of 0
-        # have ball fall bc gravity
-        # initial x is same for drone and ball so ball just falls straight downwards
-        x, y, vx, vy = self.ball_coordinates[0], self.ball_coordinates[1], 0, 0 # initial conditions for the ball
-        t += self.dt
-        x += vx * self.dt
-        y += vy * self.dt
-        vy -= self.g * self.dt
-        if (self.drone_coordinates[1]-0.1<y<self.drone_coordinates[1]) and (self.drone_coordinates[0]-0.25<=x<=self.drone_coordinates[0]+0.25):
-            y = self.drone_coordinates[1]
-            vy = 0
-        elif (y<=0):
-            y = 0
-            vy = 0
-            vx = 0
-        self.ball_coordinates = (x,y)
-        yield x, y
-
-
 
     def controller(self, x, y_des, z_des, vy_des, vz_des, ay_des, az_des):
         """
@@ -112,17 +83,6 @@ class Drone():
         M = self.Ixx * (Kv_phi * (-x[5]) + Kp_phi * (phi_c - x[2]))
 
         return F, M
-    
-    def linear_controller(self):
-        A = np.array([[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1],[0,0,-self.g,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]])
-        # Ax+Bu is essentially dx/dt
-        B = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],[1/self.m,0,-1], [0,1/self.Ixx,0]])
-        C = np.array([[1, 0, 0, 0,0,0],[0,1,0,0,0,0]])
-        D = 0
-        s = ct.StateSpace(A,B,C,D)
-        x0 = np.array([2,2,0,0,0,0])
-        imp = ct.impulse_response(s)
-        return imp
     
     def clamp(self, F, M):
         """
@@ -168,9 +128,63 @@ class Drone():
         return [x[3],
                 x[4],
                 x[5],
-                -F_clamped * sin(x[2]) / self.m,
-                F_clamped * cos(x[2]) / self.m - self.g,
+                -F_clamped * np.sin(x[2]) / self.m,
+                F_clamped * np.cos(x[2]) / self.m - self.g,
                 M_clamped / self.Ixx]
+    
+    def linear_controller(self):
+        """
+        Get the linear controller response
+        """
+        A = np.array(
+            [
+                [0,0,0,1,0,0],
+                [0,0,0,0,1,0],
+                [0,0,0,0,0,1],
+                [0,0,-self.g,0,0,0],
+                [0,0,0,0,0,0],
+                [0,0,0,0,0,0]
+            ]
+        )
+
+        # Ax+Bu is essentially dx/dt
+        B = np.array(
+            [
+                [0,0,0],
+                [0,0,0],
+                [0,0,0],
+                [0,0,0],
+                [1/self.m,0,-1],
+                [0,1/self.Ixx,0]
+            ]
+        )
+
+        C = np.array(
+            [
+                [1,0,0,0,0,0],
+                [0,1,0,0,0,0]
+            ]
+        )
+
+        D = 0
+
+        # Get open-loop linear system
+        system = ct.StateSpace(A,B,C,D)
+
+        # Get step response
+        time = np.linspace(0, 20, 1000)
+        x0 = np.array([2,2,0,0,0,0])
+        data = ct.step_response(sys=system, T=time, X0=x0)
+
+        return data
+    
+    def get_ball_data(self, ball_x: float, ball_y: float, ball_vx: float, ball_vy) -> None:
+        self.ball_x = ball_x
+        self.ball_y = ball_y
+        self.ball_vx = ball_vx
+        self.ball_vy = ball_vy
+        return
+
 
 
 
@@ -185,9 +199,7 @@ def main():
         body_length=2,
         arm_length=0.086,
         dt=0.1,
-        ball_coordinates=(2,5),
-        drone_coordinates=(2,2),
-        ball_velocities=(0,0)
+        drone_coordinates=(0,0),
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
