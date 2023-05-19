@@ -4,18 +4,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import control as ct
 
+from typing import List
+
 # source https://cookierobotics.com/052/
 
 
 class Drone():
     def __init__(
             self,
-            mass,
-            body_height,
-            body_width,
-            body_length,
-            arm_length,
-            drone_coordinates
+            mass: float,
+            body_height: float,
+            body_width: float,
+            body_length: float,
+            arm_length: float,
+            initial_state: List
         ) -> None:
 
         
@@ -32,6 +34,8 @@ class Drone():
         self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
+
+        self.state = initial_state
         return
 
     def trajectory(self, t):
