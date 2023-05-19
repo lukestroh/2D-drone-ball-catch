@@ -15,10 +15,9 @@ class Drone():
             body_width,
             body_length,
             arm_length,
-            drone_coordinates,
-            arm_length
-
+            drone_coordinates
         ) -> None:
+
         
         # Constants
         self.g = sc.g   # Gravitational acceleration (m/s^2)
@@ -33,8 +32,6 @@ class Drone():
         self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
-        
-        
         return
 
     def trajectory(self, t):
@@ -50,14 +47,14 @@ class Drone():
         else:
             x = self.ball_x
             # set the goal point of the drone to be the same as the ball
-        y = self.ball_y # arbitrary initial height of the drone
+            y = self.ball_y # arbitrary initial height of the drone
+
         vx = 0
         vy = 0
         ax = 0
         ay = 0
         return x,y,vx,vy,ax,ay
     
-
     def controller(self, x, y_des, z_des, vy_des, vz_des, ay_des, az_des):
         """
         Returns force and moment to achieve desired state given current state.
@@ -73,7 +70,6 @@ class Drone():
         return: Force and moment to achieve desired state
         """
         # this section needs to be redone. feedforward is a no-no
-
         Kp_y   = 0.4
         Kv_y   = 1.0
         Kp_z   = 0.4
@@ -91,6 +87,7 @@ class Drone():
         """
         Limit force and moment to prevent saturating the motor
         Clamp F and M such that u1 and u2 are between 0 and 1.7658
+
         u1      u2
         _____    _____
           |________|
@@ -100,7 +97,6 @@ class Drone():
         """
         u1 = 0.5*(F - M/self.L)
         u2 = 0.5*(F + M/self.L)
-        
 
         if u1 < 0 or u1 > self.max_motor_thrust or u2 < 0 or u2 > self.max_motor_thrust:
             print(f'motor saturation {u1} {u2}')
@@ -111,7 +107,6 @@ class Drone():
         M_clamped = (u2_clamped - u1_clamped) * self.L
 
         return F_clamped, M_clamped
-
 
     def xdot(self, t, x):
         """
@@ -190,6 +185,7 @@ class Drone():
 
 
 
+
 def main():
     x0 = [0, 0, 0, 0, 0, 0] # Initial state [y0, z0, phi0, vy0, vz0, phidot0]
     t_span = [0, 20]            # Simulation time (seconds) [from, to]
@@ -233,6 +229,7 @@ def main():
     plt.show()
 
     return
+
 
 
 
