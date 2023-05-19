@@ -36,6 +36,12 @@ class Drone():
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
 
         self.state = initial_state
+        self.x = initial_state[0]
+        self.y = initial_state[1]
+        self.phi = initial_state[2]
+        self.vx = initial_state[3]
+        self.vy = initial_state[4]
+        self.vphi = initial_state[5]
         return
 
     def trajectory(self, t):
@@ -200,7 +206,7 @@ def main():
         body_width=2,
         body_length=2,
         arm_length=0.086,
-        drone_coordinates=(0,0),
+        initial_state=[0,0,0,0,0,0], # x, y, phi, vx, vy, vphi
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
