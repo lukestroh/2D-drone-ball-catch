@@ -3,6 +3,7 @@ import scipy.constants as sc
 import matplotlib.pyplot as plt
 import numpy as np
 import control as ct
+
 # source https://cookierobotics.com/052/
 
 
@@ -14,8 +15,9 @@ class Drone():
             body_width,
             body_length,
             arm_length,
-            dt,
             drone_coordinates,
+            arm_length
+
         ) -> None:
         
         # Constants
@@ -24,21 +26,21 @@ class Drone():
         self.h = body_height
         self.l = body_length
         self.w = body_width
+        self.L = arm_length
+        self.max_motor_thrust = 1.7658
+
         # Mass moments of inertia (kg*m^2)
         self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
         self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
         self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
-        self.L = arm_length
-
-        # to start, the x drone coord should be the same as the x of the ball coord
-        self.dt = dt
+        
+        
         return
 
     def trajectory(self, t):
         """
         Returns the desired position, velocity, and acceleration at a given time.
         Trajectory is a step (y changes from 0 to yBall at t=1)
-
         t     : Time (seconds), scalar
         return: Desired position & velocity & acceleration, y, z, vy, vz, ay, az
         """
@@ -46,9 +48,9 @@ class Drone():
             x = 0
             # this loop basically starts the drone from a hover
         else:
-            x = self.ball_coordinates[0]
+            x = self.ball_x
             # set the goal point of the drone to be the same as the ball
-        y = self.drone_coordinates[1] # arbitrary initial height of the drone
+        y = self.ball_y # arbitrary initial height of the drone
         vx = 0
         vy = 0
         ax = 0
@@ -71,6 +73,7 @@ class Drone():
         return: Force and moment to achieve desired state
         """
         # this section needs to be redone. feedforward is a no-no
+
         Kp_y   = 0.4
         Kv_y   = 1.0
         Kp_z   = 0.4
@@ -83,13 +86,12 @@ class Drone():
         M = self.Ixx * (Kv_phi * (-x[5]) + Kp_phi * (phi_c - x[2]))
 
         return F, M
-    
+
     def clamp(self, F, M):
         """
         Limit force and moment to prevent saturating the motor
         Clamp F and M such that u1 and u2 are between 0 and 1.7658
-
-          u1      u2
+        u1      u2
         _____    _____
           |________|
 
@@ -99,7 +101,8 @@ class Drone():
         u1 = 0.5*(F - M/self.L)
         u2 = 0.5*(F + M/self.L)
         
-        if u1 < 0 or u1 > 1.7658 or u2 < 0 or u2 > 1.7658:
+
+        if u1 < 0 or u1 > self.max_motor_thrust or u2 < 0 or u2 > self.max_motor_thrust:
             print(f'motor saturation {u1} {u2}')
         
         u1_clamped = min(max(0, u1), 1.7658)
@@ -108,7 +111,6 @@ class Drone():
         M_clamped = (u2_clamped - u1_clamped) * self.L
 
         return F_clamped, M_clamped
-
 
 
     def xdot(self, t, x):
@@ -122,6 +124,7 @@ class Drone():
         """
         x_des, y_des, vx_des, vy_des, ax_des, ay_des = self.trajectory(t)
         F, M = self.controller(x, x_des, y_des, vx_des, vy_des, ax_des, ay_des)
+
         F_clamped, M_clamped = self.clamp(F, M)
 
         # First derivative, xdot = [vy, vz, phidot, ay, az, phidotdot]
@@ -187,7 +190,6 @@ class Drone():
 
 
 
-
 def main():
     x0 = [0, 0, 0, 0, 0, 0] # Initial state [y0, z0, phi0, vy0, vz0, phidot0]
     t_span = [0, 20]            # Simulation time (seconds) [from, to]
@@ -198,7 +200,6 @@ def main():
         body_width=2,
         body_length=2,
         arm_length=0.086,
-        dt=0.1,
         drone_coordinates=(0,0),
     )
 
@@ -209,17 +210,29 @@ def main():
     # Plot
     fig, axs = plt.subplots()
     axs.plot(d[0], d[1][1])
-    #axs.plot(sol.y[0], sol.y[1]) # plot of drone's trajectory
-    #axs.set_xlabel("lateral position (m)")
-    #axs.set_ylabel("vertical position (m)")
-    #axs.set_xbound(0,5)
-    #axs.set_ybound(0,5)
-    #axs.set_title("Drone path from start point to end point")
+
+#     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
+#     sol = solve_ivp(
+#         fun=drone.xdot, 
+#         t_span=t_span,
+#         y0=x0,
+#         method="RK45"
+#     )
+
+
+    # Plot
+#     fig, axs = plt.subplots()
+#     axs.plot(sol.y[0], sol.y[1]) # plot of drone's trajectory
+#     axs.set_xlabel("lateral position (m)")
+#     axs.set_ylabel("vertical position (m)")
+#     axs.set_xbound(0,5)
+#     axs.set_ybound(0,5)
+#     axs.set_title("Drone path from start point to end point")
     #axs[1].plot(sol.t, sol.y[1]) # z   vs t
     #axs[2].plot(sol.t, sol.y[2]) # phi vs t
-    #plt.show()
+    plt.show()
 
-    #return
+    return
 
 
 
