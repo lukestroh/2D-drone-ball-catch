@@ -84,7 +84,7 @@ class PlanarQuadrotor:
         quadrotor_propeller_post_left, = ax.plot([], [], 'k|', markersize=8)
         quadrotor_propeller_blade_right, = ax.plot([], [], 'k_', markersize=8)
         quadrotor_propeller_blade_left, = ax.plot([], [], 'k_', markersize=8)
-        target_position, = ax.plot([], [], 'rx', markersize=8)
+        target_position, = ax.plot([], [], 'ro', markersize=5)
 
         def update(frame):
             x = states[frame, 0]
