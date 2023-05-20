@@ -11,8 +11,7 @@ class Ball():
             start_vy: float,
             ball_mass: float,
             ball_radius: float,
-
-            dt
+            dt: float
         ):
 
         self.x = start_x

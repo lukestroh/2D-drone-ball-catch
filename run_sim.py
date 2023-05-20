@@ -11,6 +11,7 @@ def main():
         start_vy = 0, # m/s
         ball_mass = 0.05, # kg
         ball_radius = 0.03, # m
+        dt = 0.1 #s
     )
 
     drone = Drone(

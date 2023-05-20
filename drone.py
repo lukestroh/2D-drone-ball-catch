@@ -1,6 +1,7 @@
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 import control as ct
 
@@ -42,6 +43,11 @@ class Drone():
         self.vx = initial_state[3]
         self.vy = initial_state[4]
         self.vphi = initial_state[5]
+
+        self.Q = np.diag([10.0, 1.0, 1.0, 0.0])
+        self.R = np.eye(2)
+        self.target_state = np.array([2.0,2.0,0.0,0.0]) # placeholder; replace with location of ball at some point
+        self.drag = 0.1
         return
 
     def trajectory(self, t):
@@ -140,62 +146,79 @@ class Drone():
                 F_clamped * np.cos(x[2]) / self.m - self.g,
                 M_clamped / self.Ixx]
     
-    def linear_controller(self):
-        """
-        Get the linear controller response
-        """
-        A = np.array(
-            [
-                [0,0,0,1,0,0],
-                [0,0,0,0,1,0],
-                [0,0,0,0,0,1],
-                [0,0,-self.g,0,0,0],
-                [0,0,0,0,0,0],
-                [0,0,0,0,0,0]
-            ]
-        )
+    def linearize_dynamics(self):
+        # Linearized dynamics matrices
+        A = np.zeros((4, 4))
+        B = np.zeros((4, 2))
 
-        # Ax+Bu is essentially dx/dt
-        B = np.array(
-            [
-                [0,0,0],
-                [0,0,0],
-                [0,0,0],
-                [0,0,0],
-                [1/self.m,0,-1],
-                [0,1/self.Ixx,0]
-            ]
-        )
+        A[0, 2] = 1.0
+        A[1, 3] = 1.0
+        A[2, 2] = -self.drag / self.m
+        A[3, 3] = -self.drag / self.Ixx
 
-        C = np.array(
-            [
-                [1,0,0,0,0,0],
-                [0,1,0,0,0,0]
-            ]
-        )
+        B[2, 0] = 1.0 / self.m
+        B[3, 1] = 1.0 / self.Ixx
 
-        D = 0
+        return A, B
 
-        # Get open-loop linear system
-        system = ct.StateSpace(A,B,C,D)
+    def compute_control(self, state, target_state, Q, R):
+        A, B = self.linearize_dynamics()
+        K, _, _ = ct.lqr(A, B, Q, R)
+        control = -K.dot(state - target_state)
+        return control
 
-        # Get step response
-        time = np.linspace(0, 20, 1000)
-        x0 = self.state
-        data = ct.step_response(sys=system, T=time, X0=x0)
+    def simulate(self):
+        num_steps = int(5 / 0.1) + 1
+        time = np.linspace(0.0, 5, num_steps)
 
-        return data
-    
+        states = np.zeros((num_steps, 4))
+        states[0] = np.array([self.state[0],
+                     self.state[1],
+                     self.state[2],
+                     self.state[3]])
+
+        for i in range(1, num_steps):
+            state = states[i-1]
+            control = self.compute_control(state, self.target_state, self.Q, self.R)
+            A, B = self.linearize_dynamics()
+            state_dot = A.dot(state) + B.dot(control)
+            states[i] = state + state_dot * 0.1
+        return time, states
+
+    def animate_trajectory(self, time, states):
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, 5)
+        ax.set_ylim(0, 5)
+        ax.set_aspect('equal')
+        ax.grid()
+
+        quadrotor_body, = ax.plot([], [], 'k_', markersize=20)
+        quadrotor_propeller_post_right, = ax.plot([], [], 'k|', markersize=8)
+        quadrotor_propeller_post_left, = ax.plot([], [], 'k|', markersize=8)
+        quadrotor_propeller_blade_right, = ax.plot([], [], 'k_', markersize=8)
+        quadrotor_propeller_blade_left, = ax.plot([], [], 'k_', markersize=8)
+
+        def update(frame):
+            x = states[frame, 0]
+            y = states[frame, 1]
+            quadrotor_body.set_data(x, y)
+            quadrotor_propeller_post_right.set_data(x+0.18, y+0.05)
+            quadrotor_propeller_post_left.set_data(x-0.18, y+0.05)
+            quadrotor_propeller_blade_right.set_data(x+0.18, y+0.1)
+            quadrotor_propeller_blade_left.set_data(x-0.18, y+0.1)
+            return quadrotor_body, quadrotor_propeller_post_right, quadrotor_propeller_post_left, quadrotor_propeller_blade_left,quadrotor_propeller_blade_right
+
+        ani = FuncAnimation(fig, update, frames=len(time), blit=True, interval=100)
+        #ani.save("rudimentary_LQR.gif", dpi=300, writer=PillowWriter(fps=25))
+        plt.show()
+
     def get_ball_data(self, ball_x: float, ball_y: float, ball_vx: float, ball_vy) -> None:
         self.ball_x = ball_x
         self.ball_y = ball_y
         self.ball_vx = ball_vx
         self.ball_vy = ball_vy
         return
-
-
-
-
+    
 def main():
     x0 = [0, 0, 0, 0, 0, 0] # Initial state [y0, z0, phi0, vy0, vz0, phidot0]
     t_span = [0, 20]            # Simulation time (seconds) [from, to]
@@ -211,33 +234,8 @@ def main():
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
     #sol = solve_ivp(drone.xdot, t_span, x0)
-    d = drone.linear_controller()
-
-
-    # Plot
-    fig, axs = plt.subplots()
-    axs.plot(d.time, d.outputs[0][0])
-
-#     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
-#     sol = solve_ivp(
-#         fun=drone.xdot, 
-#         t_span=t_span,
-#         y0=x0,
-#         method="RK45"
-#     )
-
-
-    # Plot
-#     fig, axs = plt.subplots()
-#     axs.plot(sol.y[0], sol.y[1]) # plot of drone's trajectory
-#     axs.set_xlabel("lateral position (m)")
-#     axs.set_ylabel("vertical position (m)")
-#     axs.set_xbound(0,5)
-#     axs.set_ybound(0,5)
-#     axs.set_title("Drone path from start point to end point")
-    #axs[1].plot(sol.t, sol.y[1]) # z   vs t
-    #axs[2].plot(sol.t, sol.y[2]) # phi vs t
-    plt.show()
+    time, states = drone.simulate()
+    drone.animate_trajectory(time, states)
 
     return
 
