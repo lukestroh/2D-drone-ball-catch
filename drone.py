@@ -44,8 +44,8 @@ class Drone():
         self.vy = initial_state[4]
         self.vphi = initial_state[5]
 
-        self.Q = np.diag([1,1,1,1,1,1])
-        self.R = np.diag([1,1,0.01])
+        self.Q = np.diag([10,1,1,1,1,1])
+        self.R = np.diag([1,1,1])
         self.target_state = np.array([3.0,2.0,0.0,0.0,0.0,0.0]) # placeholder; replace with location of ball at some point
         self.drag = 0.1
         return

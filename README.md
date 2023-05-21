@@ -1,1 +1,1 @@
-Run drone.py and drone_chases_mark.py to see what I've been doing
+The animated drone in drone.py flies to a target. The drone also tilts as it flies (big win)
