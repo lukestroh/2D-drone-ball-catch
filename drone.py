@@ -44,9 +44,9 @@ class Drone():
         self.vy = initial_state[4]
         self.vphi = initial_state[5]
 
-        self.Q = np.diag([10.0, 1.0, 1.0, 0.0])
-        self.R = np.eye(2)
-        self.target_state = np.array([2.0,2.0,0.0,0.0]) # placeholder; replace with location of ball at some point
+        self.Q = np.diag([1,1,1,1,1,1])
+        self.R = np.diag([1,1,0.01])
+        self.target_state = np.array([3.0,2.0,0.0,0.0,0.0,0.0]) # placeholder; replace with location of ball at some point
         self.drag = 0.1
         return
 
@@ -148,16 +148,18 @@ class Drone():
     
     def linearize_dynamics(self):
         # Linearized dynamics matrices
-        A = np.zeros((4, 4))
-        B = np.zeros((4, 2))
-
-        A[0, 2] = 1.0
-        A[1, 3] = 1.0
-        A[2, 2] = -self.drag / self.m
-        A[3, 3] = -self.drag / self.Ixx
-
-        B[2, 0] = 1.0 / self.m
-        B[3, 1] = 1.0 / self.Ixx
+        A = np.array([[0,0,0,1.0,0,0],
+                      [0,0,0,0,1.0,0],
+                      [0,0,0,0,0,1.0],
+                      [0,0,-self.g,0,0,0],
+                      [0,0,0,0,0,0],
+                      [0,0,0,0,0,0],])
+        B = np.array([[0,0,0],
+                      [0,0,0],
+                      [0,0,0],
+                      [0,0,0],
+                      [1.0/self.m,0,-1.0],
+                      [0,1.0/self.Ixx,0]])
 
         return A, B
 
@@ -171,11 +173,13 @@ class Drone():
         num_steps = int(5 / 0.1) + 1
         time = np.linspace(0.0, 5, num_steps)
 
-        states = np.zeros((num_steps, 4))
+        states = np.zeros((num_steps, 6))
         states[0] = np.array([self.state[0],
                      self.state[1],
                      self.state[2],
-                     self.state[3]])
+                     self.state[3],
+                     self.state[4],
+                     self.state[5]])
 
         for i in range(1, num_steps):
             state = states[i-1]
@@ -184,32 +188,60 @@ class Drone():
             state_dot = A.dot(state) + B.dot(control)
             states[i] = state + state_dot * 0.1
         return time, states
+    
+    def interpolate_target_state(self, t, target_states):
+        """This relates to the hardcoded positions at the bottom.
+        I plan to replace this with a function that generates positions based
+        off a ball falling. Currently, the program interpolates between the given
+        points to plot where the target is."""
+        t_max = max(target_states.keys())
+        if t <= 0:
+            return target_states[0]
+        elif t >= t_max:
+            return target_states[t_max]
+        else:
+            t_prev = max([t_prev for t_prev in target_states.keys() if t_prev < t])
+            t_next = min([t_next for t_next in target_states.keys() if t_next > t])
+            alpha = (t - t_prev) / (t_next - t_prev)
+            target_prev = target_states[t_prev]
+            target_next = target_states[t_next]
+            target_interpolated = target_prev + alpha * (target_next - target_prev)
+            return target_interpolated
 
-    def animate_trajectory(self, time, states):
+    def animate_trajectory(self, time, states, target_states):
         fig, ax = plt.subplots()
         ax.set_xlim(0, 5)
         ax.set_ylim(0, 5)
         ax.set_aspect('equal')
+        ax.set_xlabel("Horizontal position")
+        ax.set_ylabel("Vertical position")
         ax.grid()
-
-        quadrotor_body, = ax.plot([], [], 'k_', markersize=20)
-        quadrotor_propeller_post_right, = ax.plot([], [], 'k|', markersize=8)
-        quadrotor_propeller_post_left, = ax.plot([], [], 'k|', markersize=8)
-        quadrotor_propeller_blade_right, = ax.plot([], [], 'k_', markersize=8)
-        quadrotor_propeller_blade_left, = ax.plot([], [], 'k_', markersize=8)
-
         def update(frame):
             x = states[frame, 0]
-            y = states[frame, 1]
+            y = self.y
+            theta = states[frame, 2]
+            quadrotor_body, = ax.plot([], [], 'k',marker=(2, 0, 90+theta*(180/np.pi)), markersize=20)
+            quadrotor_propeller_post_right, = ax.plot([], [], 'k', marker=(2, 0, theta*(180/np.pi)), markersize=8)
+            quadrotor_propeller_post_left, = ax.plot([], [], 'k', marker=(2, 0, theta*(180/np.pi)),markersize=8)
+            quadrotor_propeller_blade_right, = ax.plot([], [], 'k', marker=(2, 0, 90+theta*(180/np.pi)), markersize=8)
+            quadrotor_propeller_blade_left, = ax.plot([], [], 'k', marker=(2, 0, 90+theta*(180/np.pi)), markersize=8)
+            target_position, = ax.plot([], [], 'ro', markersize=5)
             quadrotor_body.set_data(x, y)
             quadrotor_propeller_post_right.set_data(x+0.18, y+0.05)
             quadrotor_propeller_post_left.set_data(x-0.18, y+0.05)
             quadrotor_propeller_blade_right.set_data(x+0.18, y+0.1)
             quadrotor_propeller_blade_left.set_data(x-0.18, y+0.1)
-            return quadrotor_body, quadrotor_propeller_post_right, quadrotor_propeller_post_left, quadrotor_propeller_blade_left,quadrotor_propeller_blade_right
 
-        ani = FuncAnimation(fig, update, frames=len(time), blit=True, interval=100)
-        #ani.save("rudimentary_LQR.gif", dpi=300, writer=PillowWriter(fps=25))
+            current_time = time[frame]
+            current_target_state = self.interpolate_target_state(current_time, target_states)
+            target_x = current_target_state[0]
+            target_y = current_target_state[1]
+            target_position.set_data(target_x, target_y)
+            
+            return quadrotor_body, target_position, quadrotor_propeller_post_right, quadrotor_propeller_post_left, quadrotor_propeller_blade_left,quadrotor_propeller_blade_right
+        
+        ani = FuncAnimation(fig, update, frames=len(time), blit=True)
+        #ani.save("ball_catch.gif", dpi=300, writer=PillowWriter(fps=25))
         plt.show()
 
     def get_ball_data(self, ball_x: float, ball_y: float, ball_vx: float, ball_vy) -> None:
@@ -229,13 +261,17 @@ def main():
         body_width=2,
         body_length=2,
         arm_length=0.086,
-        initial_state=[0,0,0,0,0,0], # x, y, phi, vx, vy, vphi
+        initial_state=[0,2,0,0,0,0], # x, y, phi, vx, vy, vphi
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
     #sol = solve_ivp(drone.xdot, t_span, x0)
     time, states = drone.simulate()
-    drone.animate_trajectory(time, states)
+    target_states = {
+        0.0: np.array([3.0, 5.0, 0.0, 0.0,0.0,0.0]),
+        2.0: np.array([3.0, 2.0, 0.0, 0.0,0.0,0.0])
+    }
+    drone.animate_trajectory(time, states, target_states, )
 
     return
 
