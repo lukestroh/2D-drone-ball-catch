@@ -18,7 +18,8 @@ class Drone():
             body_width: float,
             body_length: float,
             arm_length: float,
-            initial_state: List
+            initial_state: List,
+            dt: float
         ) -> None:
 
         
@@ -44,10 +45,15 @@ class Drone():
         self.vy = initial_state[4]
         self.vphi = initial_state[5]
 
+        # Dynamics
+        self.A, self.B = self.linearize_dynamics()
         self.Q = np.diag([10,1,1,1,1,1])
         self.R = np.diag([1,1,1])
+
+
         self.target_state = np.array([3.0,2.0,0.0,0.0,0.0,0.0]) # placeholder; replace with location of ball at some point
         self.drag = 0.1
+        self.dt = dt
         return
 
     def trajectory(self, t):
@@ -163,31 +169,46 @@ class Drone():
 
         return A, B
 
-    def compute_control(self, state, target_state, Q, R):
-        A, B = self.linearize_dynamics()
-        K, _, _ = ct.lqr(A, B, Q, R)
-        control = -K.dot(state - target_state)
+    def compute_control(self):
+        K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
+        control = -K.dot(self.state - self.target_state)
         return control
 
     def simulate(self):
-        num_steps = int(5 / 0.1) + 1
+        num_steps = int(5 / self.dt) + 1
         time = np.linspace(0.0, 5, num_steps)
 
         states = np.zeros((num_steps, 6))
-        states[0] = np.array([self.state[0],
-                     self.state[1],
-                     self.state[2],
-                     self.state[3],
-                     self.state[4],
-                     self.state[5]])
+        controls = np.zeros((num_steps,3))
+        states[0] = np.array(
+            [
+                self.state[0],
+                self.state[1],
+                self.state[2],
+                self.state[3],
+                self.state[4],
+                self.state[5]
+            ]
+        )
 
         for i in range(1, num_steps):
             state = states[i-1]
             control = self.compute_control(state, self.target_state, self.Q, self.R)
             A, B = self.linearize_dynamics()
             state_dot = A.dot(state) + B.dot(control)
-            states[i] = state + state_dot * 0.1
-        return time, states
+            states[i] = state + state_dot * self.dt
+            controls[i] = control
+
+        return time, states, controls
+    
+    def step(self):
+        control = self.compute_control()
+        state_dot = self.A @ self.state + self.B @ control
+        self.state = self.state + state_dot * self.dt
+        return
+        
+        
+
     
     def interpolate_target_state(self, t, target_states):
         """This relates to the hardcoded positions at the bottom.
@@ -255,6 +276,8 @@ def main():
     x0 = [0, 0, 0, 0, 0, 0] # Initial state [y0, z0, phi0, vy0, vz0, phidot0]
     t_span = [0, 20]            # Simulation time (seconds) [from, to]
 
+    dt = 0.001
+
     drone = Drone(
         mass=0.18,
         body_height=2,
@@ -262,16 +285,21 @@ def main():
         body_length=2,
         arm_length=0.086,
         initial_state=[0,2,0,0,0,0], # x, y, phi, vx, vy, vphi
+        dt = dt
     )
 
     # Solve for the states, x(t) = [y(t), z(t), phi(t), vy(t), vz(t), phidot(t)]
     #sol = solve_ivp(drone.xdot, t_span, x0)
-    time, states = drone.simulate()
-    target_states = {
-        0.0: np.array([3.0, 5.0, 0.0, 0.0,0.0,0.0]),
-        2.0: np.array([3.0, 2.0, 0.0, 0.0,0.0,0.0])
-    }
-    drone.animate_trajectory(time, states, target_states, )
+    time, states, controls = drone.simulate()
+    # target_states = {
+    #     0.0: np.array([3.0, 5.0, 0.0, 0.0,0.0,0.0]),
+    #     2.0: np.array([3.0, 2.0, 0.0, 0.0,0.0,0.0])
+    # }
+    # drone.animate_trajectory(time, states, target_states, )
+
+    # print(forces)
+    plt.plot(time, controls[:,2])
+    plt.show()
 
     return
 

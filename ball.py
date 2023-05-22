@@ -18,6 +18,8 @@ class Ball():
         self.y = start_y
         self.vx = start_vx
         self.vy = start_vy
+        self.state = [self.x, self.y, self.vx, self.vy]
+
         self.mass = ball_mass
         self.radius = ball_radius
 
@@ -52,3 +54,20 @@ class Ball():
             self.vx = 0
 
         yield self.x, self.y
+
+    def step(self, drone_state = None):
+        if drone_state:
+            ... # TODO
+
+        else:
+            self.vy += -self.g * self.dt
+            self.x += self.vx * self.dt
+            self.y += self.vy * self.dt
+            
+            if (self.y - self.radius <= 0):
+                self.y = 0
+                self.vy = 0
+        
+        self.state = [self.x, self.y, self.vx, self.vy]
+        return
+        
