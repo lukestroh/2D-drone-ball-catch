@@ -76,7 +76,7 @@ class Drone():
 
     def compute_control(self):
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
-        control = -K.dot(self.state - self.target_state)
+        control = -K @ (self.state - self.target_state)
         return control
 
     
