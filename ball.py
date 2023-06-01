@@ -37,6 +37,7 @@ class Ball():
             self.y += self.vy * self.dt
             
             if (self.y - self.radius <= 0):
+                self.vx = 0
                 self.y = 0
                 self.vy = 0
         

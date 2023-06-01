@@ -125,6 +125,16 @@ class Drone(DroneBody):
             target_next = target_states[t_next]
             target_interpolated = target_prev + alpha * (target_next - target_prev)
             return target_interpolated
+        
+    def simulate(self):
+        num_steps = int(5 / self.dt) + 1
+        time = np.linspace(0.0, 5, num_steps)
+
+        states = np.zeros((num_steps, 4))
+        states[0] = np.array([self.state[0],
+                     self.state[1],
+                     self.state[2],
+                     self.state[3]])
 
     def animate_trajectory(self, time, states, target_states):
         fig, ax = plt.subplots()
