@@ -78,6 +78,22 @@ class Drone():
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
         control = -K @ (self.state - self.target_state)
         return control
+    
+    def predict_ball_position(
+            self,
+            ball_x: float,
+            ball_y: float,
+            ball_vx: float,
+            ball_vy: float
+        )-> None:
+        
+        # Find the time for the ball to fall from current position to the drone height
+        ball_coefs = np.array([-self.g/2, ball_vy, (ball_y - self.y)])
+        time_to_fall = max(np.roots(ball_coefs))
+
+        # Find the predicted x location of the ball using that time
+        x_prediction = ball_x + ball_vx * time_to_fall
+        return x_prediction
 
     
     def step(self):
@@ -141,12 +157,6 @@ class Drone():
         #ani.save("ball_catch.gif", dpi=300, writer=PillowWriter(fps=25))
         plt.show()
 
-    def get_ball_data(self, ball_x: float, ball_y: float, ball_vx: float, ball_vy) -> None:
-        self.ball_x = ball_x
-        self.ball_y = ball_y
-        self.ball_vx = ball_vx
-        self.ball_vy = ball_vy
-        return
     
 def main():
     x0 = [0, 0, 0, 0, 0, 0] # Initial state [y0, z0, phi0, vy0, vz0, phidot0]

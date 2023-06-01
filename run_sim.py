@@ -14,7 +14,7 @@ def main():
     ball = Ball(
         start_x = 0, # m
         start_y = 10, # m
-        start_vx = 0, # m/s
+        start_vx = 1, # m/s
         start_vy = 0, # m/s
         ball_mass = 0.05, # kg
         ball_radius = 0.03, # m
@@ -39,6 +39,10 @@ def main():
         # drone_states.append(drone.state)
         ball.step()
         # drone.step()
+
+        print(f"Ball (x,y): ({ball.x}, {ball.y})")
+        ball_pred = drone.predict_ball_position(ball.x, ball.y, ball.vx, ball.vy)
+        print(f"Ball pred: {ball_pred}")
         
         time += dt
         
@@ -48,8 +52,8 @@ def main():
     #     if ball hits drone:
     #         parallel axis
 
-    plt.plot(timesteps, ball_states)
-    plt.show()
+    # plt.plot(timesteps, ball_states)
+    # plt.show()
 
     return
 
