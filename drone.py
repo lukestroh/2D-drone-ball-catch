@@ -1,3 +1,5 @@
+from drone_body import DroneBody
+
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
 import matplotlib.pyplot as plt
@@ -10,7 +12,7 @@ from typing import List
 # source https://cookierobotics.com/052/
 
 
-class Drone():
+class Drone(DroneBody):
     def __init__(
             self,
             mass: float,
@@ -22,20 +24,8 @@ class Drone():
             dt: float
         ) -> None:
 
-        
-        # Constants
-        self.g = sc.g   # Gravitational acceleration (m/s^2)
-        self.m = mass    # Mass (kg)
-        self.h = body_height
-        self.l = body_length
-        self.w = body_width
-        self.L = arm_length
-        self.max_motor_thrust = 1.7658
-
-        # Mass moments of inertia (kg*m^2)
-        self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
-        self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
-        self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
+        # Init drone body
+        super().__init__(mass, body_height, body_length, body_width, arm_length)
 
         self.state = initial_state
         self.x = initial_state[0]
@@ -45,13 +35,19 @@ class Drone():
         self.vy = initial_state[4]
         self.vphi = initial_state[5]
 
+        # Center of mass
+        self.com = [self.x, self.y]
+
         # Dynamics
         self.A, self.B = self.linearize_dynamics()
         self.Q = np.diag([10,1,1,1,1,1])
         self.R = np.diag([1,1,1])
 
+        # Max motor thrust
+        self.max_motor_thrust = 1.7658
 
-        self.target_state = np.array([3.0,2.0,0.0,0.0,0.0,0.0]) # placeholder; replace with location of ball at some point
+
+        self.target_state = np.zeros(6)
         self.drag = 0.1
         self.dt = dt
         return
@@ -86,7 +82,7 @@ class Drone():
             ball_vx: float,
             ball_vy: float
         )-> None:
-        
+
         # Find the time for the ball to fall from current position to the drone height
         ball_coefs = np.array([-self.g/2, ball_vy, (ball_y - self.y)])
         time_to_fall = max(np.roots(ball_coefs))
@@ -94,6 +90,15 @@ class Drone():
         # Find the predicted x location of the ball using that time
         x_prediction = ball_x + ball_vx * time_to_fall
         return x_prediction
+    
+    def update_target_state(self, tx, ty, tphi, tvx, tvy, tphidot):
+        self.target_state[0] = tx
+        self.target_state[1] = ty
+        self.target_state[2] = tphi
+        self.target_state[3] = tvx
+        self.target_state[4] = tvy
+        self.target_state[5] = tphidot
+        return
 
     
     def step(self):

@@ -27,7 +27,7 @@ def main():
         body_width = 2,
         body_length = 2,
         arm_length = 0.086,
-        initial_state = [0,0,0,0,0,0], # x, y, phi, vx, vy, vphi
+        initial_state = [0,1,0,0,0,0], # x, y, phi, vx, vy, vphi
         dt = dt
     )
 
@@ -36,13 +36,14 @@ def main():
 
         timesteps.append(time)
         ball_states.append(ball.state)
-        # drone_states.append(drone.state)
+        drone_states.append(drone.state)
         ball.step()
-        # drone.step()
+        drone.step()
 
-        print(f"Ball (x,y): ({ball.x}, {ball.y})")
+        # print(f"Ball (x,y): ({ball.x}, {ball.y})")
         ball_pred = drone.predict_ball_position(ball.x, ball.y, ball.vx, ball.vy)
-        print(f"Ball pred: {ball_pred}")
+        drone.update_target_state(ball_pred, 1, 0, 0, 0, 0)
+        # print(f"Ball pred: {ball_pred}")
         
         time += dt
         
@@ -52,8 +53,9 @@ def main():
     #     if ball hits drone:
     #         parallel axis
 
-    # plt.plot(timesteps, ball_states)
-    # plt.show()
+    plt.plot(timesteps, drone_states)
+    plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])
+    plt.show()
 
     return
 
