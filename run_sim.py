@@ -60,7 +60,7 @@ def main():
 
     imp_data = drone.get_impulse_resp(t0=time,  sim_time=sim_time, i=i)
 
-    print(imp_data.time)
+    print(imp_data.outputs)
     # Plotting
     plt.plot(timesteps, drone_states.transpose())
     plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])

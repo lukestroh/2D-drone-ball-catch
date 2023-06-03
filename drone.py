@@ -177,6 +177,10 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
+
+
+    def _get_ball_impact_loc(self):
+        return
     
     def update_moment_of_inertia(self) -> None:
         return
