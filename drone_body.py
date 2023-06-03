@@ -5,11 +5,11 @@ from typing import List
 class DroneBody():
     def __init__(
             self,
-            mass,
-            body_height,
-            body_length,
-            body_width,
-            arm_length
+            mass: float,
+            body_height: float,
+            body_length: float,
+            body_width: float,
+            arm_length: float
         ) -> None:
         
         # Constants

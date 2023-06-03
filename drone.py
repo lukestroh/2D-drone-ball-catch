@@ -1,4 +1,5 @@
 from drone_body import DroneBody
+import ball
 
 from scipy.integrate import solve_ivp
 import scipy.constants as sc
@@ -27,6 +28,7 @@ class Drone(DroneBody):
         # Init drone body
         super().__init__(mass, body_height, body_length, body_width, arm_length)
 
+        # Drone state
         self.state = initial_state
         self.x = initial_state[0]
         self.y = initial_state[1]
@@ -54,7 +56,7 @@ class Drone(DroneBody):
 
     
     def linearize_dynamics(self):
-        # Linearized dynamics matrices
+        """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
                       [0,0,0,0,1.0,0],
                       [0,0,0,0,0,1.0],
@@ -75,20 +77,16 @@ class Drone(DroneBody):
         control = -K @ (self.state - self.target_state)
         return control
     
-    def predict_ball_position(
-            self,
-            ball_x: float,
-            ball_y: float,
-            ball_vx: float,
-            ball_vy: float
-        )-> None:
-
+    def predict_ball_position(self, ball: ball.Ball)-> float:
+        """
+        Calculate the x location where the ball will be when it reaches the current drone height
+        """
         # Find the time for the ball to fall from current position to the drone height
-        ball_coefs = np.array([-self.g/2, ball_vy, (ball_y - self.y)])
+        ball_coefs = np.array([-self.g/2, ball.vy, (ball.y - self.y)])
         time_to_fall = max(np.roots(ball_coefs))
 
         # Find the predicted x location of the ball using that time
-        x_prediction = ball_x + ball_vx * time_to_fall
+        x_prediction = ball.x + ball.vx * time_to_fall
         return x_prediction
     
     def update_target_state(self, tx, ty, tphi, tvx, tvy, tphidot):
@@ -100,11 +98,41 @@ class Drone(DroneBody):
         self.target_state[5] = tphidot
         return
 
+    def detect_impact(self, ball: ball.Ball) -> bool:
+        """ Detect if the ball collides with the body of the drone """
+        # need drone body, need phi, need ball radius
+        k = np.sqrt((self.w/2)**2 + (self.h/2)**2)
+        theta = np.arctan2(self.h, self.w)
+        body_right_corner_loc = (self.x + k * np.cos(self.phi - theta), self.y + k * np.sin(self.phi - theta))
+        body_left_corner_loc = (self.x - k * np.cos(self.phi - theta), self.y - k * np.sin(self.phi - theta))
+
+        # cross product from origin to detect if radius has hit drone?
+        # distance between a point and a line:
+            # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
+            # given that the line has the equation ax + by + c = 0
+
+        return
+    
+    """ TODO:
+        Finish detect_impact
+        update moment of inertia for original body
+        create function to update MOI after impact
+        create function that fixes ball to drone body (corresponding function in Ball?)
+        write impulse_response function
+        
+    """
     
     def step(self):
+        """ Perform a single movement iteration by updating the state """
         control = self.compute_control()
         state_dot = self.A @ self.state + self.B @ control
         self.state = self.state + state_dot * self.dt
+        self.x = self.state[0]
+        self.y = self.state[1]
+        self.phi = self.state[2]
+        self.vx = self.state[3]
+        self.vy = self.state[4]
+        self.vphi = self.state[5]
         return
         
     def interpolate_target_state(self, t, target_states):
