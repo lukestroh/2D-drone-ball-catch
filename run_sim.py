@@ -18,9 +18,9 @@ def main():
 
     drone = Drone(
         mass = 0.18,
-        body_height = 2,
-        body_width = 2,
-        body_length = 2,
+        body_height = 0.1,
+        body_width = 0.36,
+        body_length = 0.36,
         arm_length = 0.086,
         initial_state = [0,1,0,0,0,0], # x, y, phi, vx, vy, vphi
         dt = dt
