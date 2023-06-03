@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 
 
 def main():
+    dt = 0.001
+    time = 0
+    sim_time = 5 # s
+
     ball = Ball(
         start_x = 0, # m
         start_y = 10, # m
@@ -17,28 +21,26 @@ def main():
     )
 
     drone = Drone(
-        mass = 0.18,
-        body_height = 0.1,
-        body_width = 0.36,
-        body_length = 0.36,
-        arm_length = 0.086,
+        mass = 0.18, # kg
+        body_height = 0.1, # m
+        body_width = 0.36, # m
+        body_length = 0.36, # m
+        arm_length = 0.086, # m
         initial_state = [0,1,0,0,0,0], # x, y, phi, vx, vy, vphi
-        dt = dt
+        dt = dt # s
     )
 
-    dt = 0.001
-    time = 0
-    sim_time = 5 # s
-    timesteps = np.zeros(sim_time/dt)
-    drone_states = np.zeros((len(drone.state), sim_time/dt))
-    ball_states = np.zeros((len(ball.state), sim_time/dt))
-
     
+    timesteps = np.linspace(0,5,int(sim_time/dt))
+    drone_states = np.zeros((len(drone.state), int(sim_time/dt)))
+    ball_states = np.zeros((len(ball.state), int(sim_time/dt)))
+
+    i = 0
     while True:
 
-        timesteps.append(time)
-        ball_states.append(ball.state)
-        drone_states.append(drone.state)
+        # timesteps[i] = time
+        ball_states[:,i] = ball.state
+        drone_states[:,i] = drone.state
         ball.step()
         drone.step()
 
@@ -51,11 +53,14 @@ def main():
             break
 
         if drone.detect_impact(ball=ball):
+            print("True!")
             break
         
+        i += 1
+
 
     # Plotting
-    plt.plot(timesteps, drone_states)
+    plt.plot(timesteps, drone_states.transpose())
     plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])
     plt.show()
 

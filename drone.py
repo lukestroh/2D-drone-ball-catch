@@ -42,7 +42,7 @@ class Drone(DroneBody):
 
         # Dynamics
         self.A, self.B = self.linearize_dynamics()
-        self.Q = np.diag([10,1,1,1,1,1])
+        self.Q = np.diag([100,1,1,10,1,1])
         self.R = np.diag([1,1,1])
 
         # Max motor thrust
@@ -100,18 +100,44 @@ class Drone(DroneBody):
 
     def detect_impact(self, ball: ball.Ball) -> bool:
         """ Detect if the ball collides with the body of the drone """
-        # need drone body, need phi, need ball radius
+        
+        # Get absolute corner locations
         k = np.sqrt((self.w/2)**2 + (self.h/2)**2)
         theta = np.arctan2(self.h, self.w)
-        body_right_corner_loc = (self.x + k * np.cos(self.phi - theta), self.y + k * np.sin(self.phi - theta))
-        body_left_corner_loc = (self.x - k * np.cos(self.phi - theta), self.y - k * np.sin(self.phi - theta))
+        body_right_corner_loc = (
+            self.x + k * np.cos(self.phi - theta),
+            self.y + k * np.sin(self.phi - theta)
+        )
+        body_left_corner_loc = (
+            self.x - k * np.cos(self.phi - theta),
+            self.y - k * np.sin(self.phi - theta)
+        )
 
-        # cross product from origin to detect if radius has hit drone?
+        # Create ax + by + c = 0 from corners
+        # slope = (body_right_corner_loc[1] - body_left_corner_loc[1]) / (body_right_corner_loc[0] - body_left_corner_loc[0])
+        # intercept = body_left_corner_loc[1] - slope * body_left_corner_loc[0]
+        # a = 1
+        # b = -1/slope
+        # c = intercept/slope
+
+        # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
+        a = body_right_corner_loc[1] - body_left_corner_loc[1]
+        b = body_left_corner_loc[0] - body_right_corner_loc[0]
+        c = (
+            body_right_corner_loc[0] * body_left_corner_loc[1] -
+            body_left_corner_loc[0] * body_right_corner_loc[1]
+        )
+
+        d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
+
         # distance between a point and a line:
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
-
-        return
+        # If the distance - ball radius <=0, then we have hit the drone
+        if d - ball.radius <= 0:
+            return True
+        else:
+            return False
     
     """ TODO:
         Finish detect_impact
@@ -119,7 +145,7 @@ class Drone(DroneBody):
         create function to update MOI after impact
         create function that fixes ball to drone body (corresponding function in Ball?)
         write impulse_response function
-        
+
     """
     
     def step(self):
