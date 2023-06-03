@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.constants as sc
 
-
 class Ball():
     def __init__(
             self,
@@ -42,5 +41,9 @@ class Ball():
                 self.vy = 0
         
         self.state = [self.x, self.y, self.vx, self.vy]
+        return
+    
+    def update_loc_from_drone(self):
+        
         return
         

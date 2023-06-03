@@ -8,7 +8,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 import control as ct
 
-from typing import List
+from typing import List, Tuple
 
 # source https://cookierobotics.com/052/
 
@@ -40,7 +40,7 @@ class Drone(DroneBody):
         # Center of mass
         self.com = [self.x, self.y]
 
-        # Dynamics
+        # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
         self.Q = np.diag([100,1,1,10,1,1])
         self.R = np.diag([1,1,1])
@@ -55,7 +55,7 @@ class Drone(DroneBody):
         return
 
     
-    def linearize_dynamics(self):
+    def linearize_dynamics(self) -> Tuple[np.ndarray]:
         """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
                       [0,0,0,0,1.0,0],
@@ -72,7 +72,7 @@ class Drone(DroneBody):
 
         return A, B
 
-    def compute_control(self):
+    def compute_control(self) -> np.ndarray:
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
         control = -K @ (self.state - self.target_state)
         return control
@@ -89,7 +89,15 @@ class Drone(DroneBody):
         x_prediction = ball.x + ball.vx * time_to_fall
         return x_prediction
     
-    def update_target_state(self, tx, ty, tphi, tvx, tvy, tphidot):
+    def update_target_state(
+            self,
+            tx: float,
+            ty: float,
+            tphi: float,
+            tvx: float,
+            tvy: float,
+            tphidot: float
+        ) -> None:
         self.target_state[0] = tx
         self.target_state[1] = ty
         self.target_state[2] = tphi
@@ -140,15 +148,24 @@ class Drone(DroneBody):
             return False
     
     """ TODO:
+        # Code
         Finish detect_impact
         update moment of inertia for original body
         create function to update MOI after impact
         create function that fixes ball to drone body (corresponding function in Ball?)
         write impulse_response function
+            append this to current datatype? syncing time and state important
+
+        # Data
+        Figure out if data makes sense (Does drone flip upside down?)
+        Generate control plots
+        Generate Force/torque plots
+        Generate ball plot?
 
     """
     
-    def step(self):
+    
+    def step(self) -> None:
         """ Perform a single movement iteration by updating the state """
         control = self.compute_control()
         state_dot = self.A @ self.state + self.B @ control
@@ -160,6 +177,29 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
+    
+    def update_moment_of_inertia(self) -> None:
+        return
+    
+    def get_impulse_resp(
+            self,
+            t0: float,
+            sim_time: float,
+            i: int
+        ) -> ct.TimeResponseData:
+        
+        time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
+
+        self.update_moment_of_inertia()
+        self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
+        C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        D = 0
+        sys = ct.StateSpace(self.A, self.B, C, D)
+        data = ct.impulse_response(sys=sys, T=time)
+
+        return data
+    
+
         
     def interpolate_target_state(self, t, target_states):
         """This relates to the hardcoded positions at the bottom.

@@ -32,8 +32,8 @@ def main():
 
     
     timesteps = np.linspace(0,5,int(sim_time/dt))
-    drone_states = np.zeros((len(drone.state), int(sim_time/dt)))
-    ball_states = np.zeros((len(ball.state), int(sim_time/dt)))
+    drone_states = np.zeros((len(drone.state), int(sim_time/dt)), dtype=float)
+    ball_states = np.zeros((len(ball.state), int(sim_time/dt)), dtype=float)
 
     i = 0
     while True:
@@ -58,7 +58,9 @@ def main():
         
         i += 1
 
+    imp_data = drone.get_impulse_resp(t0=time,  sim_time=sim_time, i=i)
 
+    print(imp_data.time)
     # Plotting
     plt.plot(timesteps, drone_states.transpose())
     plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])
