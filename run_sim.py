@@ -40,10 +40,11 @@ def main():
     i = 0
     collided = False
     while i < int(sim_time/dt):
+        # timesteps[i] = time
+        ball_states[:,i] = ball.state
+        drone_states[:,i] = drone.state
+
         if not collided:
-            # timesteps[i] = time
-            ball_states[:,i] = ball.state
-            drone_states[:,i] = drone.state
             ball.step()
             drone.step()
 
@@ -55,6 +56,7 @@ def main():
             if ball.y < drone.y:
                 break
             
+            # Check for collision
             collided = drone.detect_impact(ball=ball)
             if collided:
                 print(ball.state, drone.state)
@@ -63,9 +65,7 @@ def main():
                 drone.A, drone.B = drone.linearize_dynamics()
                 
         else:
-            ball_states[:,i] = ball.state
-            drone_states[:,i] = drone.state
-            ball.step(collided=True, drone_state=drone.state)
+            ball.step(collided=True, drone=drone)
             drone.step()
 
         i += 1

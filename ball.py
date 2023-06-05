@@ -24,11 +24,17 @@ class Ball():
 
         self.g = sc.g
         self.dt = dt
+
         return
 
-    def step(self, collided: bool = None, drone_state = None):
+    def step(self, collided: bool = None, drone = None):
         if collided:
-            ... # TODO
+            d = np.sqrt((self.x - drone.x)**2 + (self.y - drone.y)**2)
+            theta = np.arcsin(drone.h/2 + self.radius / d)
+            self.x = drone.x + d * np.cos(drone.phi + theta)
+            self.y = drone.y + d * np.sin(drone.phi + theta)
+            # update vx, vy??
+
 
         else:
             self.vy += -self.g * self.dt
