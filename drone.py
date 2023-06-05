@@ -194,9 +194,9 @@ class Drone(DroneBody):
     
     def update_moment_of_inertia(self, ball: ball.Ball) -> None:
         """ Change the moment of inertia due to the addition of the ball and location, """
-        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass * self.L**2) + ((2/5) * ball.mass * ball.radius**2)
-        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * ball.mass * ball.radius**2)
-        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * ball.mass * ball.radius**2)
+        self.Ixx = self.Ixx + ((2/5) * ball.mass * ball.radius**2)
+        # self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * ball.mass * ball.radius**2)
+        # self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * ball.mass * ball.radius**2)
         return
 
     
