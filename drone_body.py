@@ -33,8 +33,8 @@ class DroneBody():
         ]
 
         # Mass moments of inertia (kg*m^2)
-        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + 2 * self.motor_mass* self.L**2
-        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + 2 * self.motor_mass* self.w**2
-        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass* self.h**2)
+        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + 2 * self.motor_mass * self.L**2
+        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + 2 * self.motor_mass * self.w**2
+        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2)
 
         return

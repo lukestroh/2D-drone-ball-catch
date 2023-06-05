@@ -60,7 +60,7 @@ def main():
             collided = drone.detect_impact(ball=ball)
             if collided:
                 print(ball.state, drone.state)
-                drone.update_moment_of_inertia()
+                drone.update_moment_of_inertia(ball=ball)
                 drone.update_target_state(drone.state[0], drone.state[1], drone.state[2], drone.state[3], drone.state[4], drone.state[5])
                 drone.A, drone.B = drone.linearize_dynamics()
                 

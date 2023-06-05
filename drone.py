@@ -183,10 +183,11 @@ class Drone(DroneBody):
     def _get_ball_impact_loc(self):
         return
     
-    def update_moment_of_inertia(self) -> None:
-        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass* self.L**2) + ((2/5) * 0.05* 0.03**2)
-        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass* self.w**2) + ((2/5) * 0.05 * 0.03**2)
-        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass* self.h**2) + ((2/5) * 0.05 * 0.03**2)
+    def update_moment_of_inertia(self, ball: ball.Ball) -> None:
+        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass * self.L**2) + ((2/5) * 0.05* 0.03**2)
+        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * 0.05 * 0.03**2)
+        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * 0.05 * 0.03**2)
+        return
 
     
     def get_impulse_resp(
