@@ -112,12 +112,12 @@ class Drone(DroneBody):
         k = np.sqrt((self.w/2)**2 + (self.h/2)**2)
         theta = np.arctan2(self.h, self.w)
         body_right_corner_loc = (
-            self.x + k * np.cos(self.phi - theta),
-            self.y + k * np.sin(self.phi - theta)
+            self.x + k * np.cos(self.phi + theta), # TODO: Fix these angles? Should be plus?
+            self.y + k * np.sin(self.phi + theta)
         )
         body_left_corner_loc = (
-            self.x - k * np.cos(self.phi - theta),
-            self.y - k * np.sin(self.phi - theta)
+            self.x - k * np.cos(self.phi + theta),
+            self.y + k * np.sin(self.phi + theta)
         )
 
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
