@@ -20,6 +20,7 @@ class DroneBody():
         self.w = body_width
         self.L = arm_length
         self.post_height: float = 0.1
+        self.motor_mass: float = 0.02 # kg
         
         # Propeller locations
         self.right_prop_loc: List[float] = [
@@ -32,8 +33,8 @@ class DroneBody():
         ]
 
         # Mass moments of inertia (kg*m^2)
-        self.Ixx = 1/12 * self.m*(self.h**2 + self.l**2) 
-        self.Iyy = 1/12 * self.m*(self.l**2 + self.w**2)
-        self.Izz = 1/12 * self.m*(self.w**2 + self.h**2)
+        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + 2 * self.motor_mass* self.L**2
+        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + 2 * self.motor_mass* self.w**2
+        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass* self.h**2)
 
         return

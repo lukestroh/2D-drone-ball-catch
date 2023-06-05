@@ -42,7 +42,7 @@ class Drone(DroneBody):
 
         # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
-        self.Q = np.diag([100,1,1,10,1,1])
+        self.Q = np.diag([10.0,1.0,1.0,1.0,1.0,1.0])
         self.R = np.diag([1,1,1])
 
         # Max motor thrust
@@ -54,6 +54,7 @@ class Drone(DroneBody):
         self.dt = dt
         return
 
+    
     def linearize_dynamics(self) -> Tuple[np.ndarray]:
         """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
@@ -120,6 +121,13 @@ class Drone(DroneBody):
             self.y - k * np.sin(self.phi - theta)
         )
 
+        # Create ax + by + c = 0 from corners
+        # slope = (body_right_corner_loc[1] - body_left_corner_loc[1]) / (body_right_corner_loc[0] - body_left_corner_loc[0])
+        # intercept = body_left_corner_loc[1] - slope * body_left_corner_loc[0]
+        # a = 1
+        # b = -1/slope
+        # c = intercept/slope
+
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
         a = body_right_corner_loc[1] - body_left_corner_loc[1]
         b = body_left_corner_loc[0] - body_right_corner_loc[0]
@@ -128,13 +136,12 @@ class Drone(DroneBody):
             body_left_corner_loc[0] * body_right_corner_loc[1]
         )
 
+        d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
+
         # distance between a point and a line:
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
-        d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
-
         # If the distance - ball radius <=0, then we have hit the drone
-        # TODO: check if this is the drone line or if it's just anywhere on the line?
         if d - ball.radius <= 0:
             return True
         else:
@@ -143,7 +150,7 @@ class Drone(DroneBody):
     """ TODO:
         # Code
         Finish detect_impact
-        update moment of inertia for original body
+        update moment of inertia for original body (done)
         create function to update MOI after impact
         create function that fixes ball to drone body (corresponding function in Ball?)
         write impulse_response function
@@ -154,7 +161,9 @@ class Drone(DroneBody):
         Generate control plots
         Generate Force/torque plots
         Generate ball plot?
+
     """
+    
     
     def step(self) -> None:
         """ Perform a single movement iteration by updating the state """
@@ -168,12 +177,16 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
-    
+
+
     def _get_ball_impact_loc(self):
         return
     
     def update_moment_of_inertia(self) -> None:
-        return
+        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass* self.L**2) + ((2/5) * 0.05* 0.03**2)
+        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass* self.w**2) + ((2/5) * 0.05 * 0.03**2)
+        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass* self.h**2) + ((2/5) * 0.05 * 0.03**2)
+
     
     def get_impulse_resp(
             self,
@@ -184,42 +197,14 @@ class Drone(DroneBody):
         
         time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
 
-        # Update MOI for system
         self.update_moment_of_inertia()
-
-        # Get the new system
         self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-        # C = np.zeros((self.B.shape[1], self.B.shape[0]))
-        # C = np.array([1,0,0,0,0,0])
-        C = np.identity(6)
+        C = np.zeros((self.B.shape[1], self.B.shape[0]))
         D = 0
         sys = ct.StateSpace(self.A, self.B, C, D)
-        
-        # Get the impulse response? step_reponse? initial_response?
-        data = ct.step_response(sys=sys, T=time, X0=self.state)
+        data = ct.impulse_response(sys=sys, T=time)
 
         return data
-    
-
-        
-    def interpolate_target_state(self, t, target_states):
-        """This relates to the hardcoded positions at the bottom.
-        I plan to replace this with a function that generates positions based
-        off a ball falling. Currently, the program interpolates between the given
-        points to plot where the target is."""
-        t_max = max(target_states.keys())
-        if t <= 0:
-            return target_states[0]
-        elif t >= t_max:
-            return target_states[t_max]
-        else:
-            t_prev = max([t_prev for t_prev in target_states.keys() if t_prev < t])
-            t_next = min([t_next for t_next in target_states.keys() if t_next > t])
-            alpha = (t - t_prev) / (t_next - t_prev)
-            target_prev = target_states[t_prev]
-            target_next = target_states[t_next]
-            target_interpolated = target_prev + alpha * (target_next - target_prev)
-            return target_interpolated
         
     def simulate(self):
         num_steps = int(5 / self.dt) + 1
@@ -256,10 +241,11 @@ class Drone(DroneBody):
             quadrotor_propeller_blade_left.set_data(x-0.18, y+0.1)
 
             current_time = time[frame]
-            current_target_state = self.interpolate_target_state(current_time, target_states)
-            target_x = current_target_state[0]
-            target_y = current_target_state[1]
-            target_position.set_data(target_x, target_y)
+            # TODO replace animation code from interpolate_target_state with new code
+            #current_target_state = self.interpolate_target_state(current_time, target_states)
+            #target_x = current_target_state[0]
+            #target_y = current_target_state[1]
+            #target_position.set_data(target_x, target_y)
             
             return quadrotor_body, target_position, quadrotor_propeller_post_right, quadrotor_propeller_post_left, quadrotor_propeller_blade_left,quadrotor_propeller_blade_right
         
@@ -276,11 +262,11 @@ def main():
 
     drone = Drone(
         mass=0.18,
-        body_height=2,
-        body_width=2,
-        body_length=2,
+        body_height=2.0,
+        body_width=2.0,
+        body_length=2.0,
         arm_length=0.086,
-        initial_state=[0,2,0,0,0,0], # x, y, phi, vx, vy, vphi
+        initial_state=[0,2.0,0,0,0,0], # x, y, phi, vx, vy, vphi
         dt = dt
     )
 

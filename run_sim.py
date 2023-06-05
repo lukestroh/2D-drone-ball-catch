@@ -14,8 +14,8 @@ def main():
 
     ball = Ball(
         start_x = 0, # m
-        start_y = 10, # m
-        start_vx = 1, # m/s
+        start_y = 10.0, # m
+        start_vx = 1.0, # m/s
         start_vy = 0, # m/s
         ball_mass = 0.05, # kg
         ball_radius = 0.03, # m
@@ -28,7 +28,7 @@ def main():
         body_width = 0.36, # m
         body_length = 0.36, # m
         arm_length = 0.086, # m
-        initial_state = [0,1,0,0,0,0], # x, y, phi, vx, vy, vphi
+        initial_state = [0,1.0,0,0,0,0], # x, y, phi, vx, vy, vphi
         dt = dt # s
     )
 
@@ -90,13 +90,34 @@ def main():
     #     drone_states[:,i] = imp_data.x[:,i-idx]
     #     i += 1
 
-    
-
-
-
     # Plotting
-    plt.plot(timesteps, drone_states.transpose())
-    plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])
+    fig=plt.figure()
+    ax1 = fig.add_subplot(311)
+    ax1.plot(timesteps, drone_states[0], 'k')
+    ax1.plot(timesteps, drone_states[3], '#ff7f0e')
+    ax1.plot(timesteps, np.zeros(len(timesteps)), 'k--', linewidth=0.75)
+    ax1.legend(["x", "vx"], loc=1, fontsize=8)
+    ax1.set_xlim([0,3])
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Horizontal Location (m)")
+    #plt.xlim([0,5])
+    ax2 = fig.add_subplot(312)
+    ax2.plot(timesteps, drone_states[1], 'k')
+    ax2.plot(timesteps, drone_states[4], '#ff7f0e')
+    ax2.legend(["y", "vy"], loc=1, fontsize=8)
+    ax2.set_xlim([0,3])
+    ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("Vertical Location (m)")
+    #plt.xlim([0,5])
+    # the y vy plot is redundant because vy=0
+    ax3 = fig.add_subplot(313)
+    ax3.plot(timesteps, drone_states[2], 'k')
+    ax3.plot(timesteps, drone_states[5], '#ff7f0e')
+    ax3.plot(timesteps, np.zeros(len(timesteps)), 'k--', linewidth=0.5)
+    ax3.legend(["phi", "vphi"], loc=4, fontsize=8)
+    ax3.set_xlim([0,3])
+    ax3.set_xlabel("Time (s)")
+    ax3.set_ylabel("Angle (degrees)")
     plt.show()
 
     return
