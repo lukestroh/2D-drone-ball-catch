@@ -30,10 +30,19 @@ class Ball():
     def step(self, collided: bool = None, drone = None):
         if collided:
             d = np.sqrt((self.x - drone.x)**2 + (self.y - drone.y)**2)
-            theta = np.arcsin(drone.h/2 + self.radius / d)
-            self.x = drone.x + d * np.cos(drone.phi + theta)
+            theta = np.arcsin((drone.h/2 + self.radius) / d)
+
+            # Place the ball on the correct side of the drone
+            if self.x >= drone.x:
+                self.x = drone.x + d * np.cos(drone.phi + theta)
+            else:
+                self.x = drone.x - d * np.cos(drone.phi + theta)
             self.y = drone.y + d * np.sin(drone.phi + theta)
-            # update vx, vy??
+            # update vx, vy?? does this work if ball is on left side of drone COM?
+            # would vx, vy = angular momentum of drone?
+
+            self.vx = 0
+            self.vy = 0           
 
 
         else:
@@ -50,4 +59,3 @@ class Ball():
         return
     
 
-        
