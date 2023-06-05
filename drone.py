@@ -161,6 +161,7 @@ class Drone(DroneBody):
         Generate control plots
         Generate Force/torque plots
         Generate ball plot?
+        Simplify the animation to make the drone just a rectangle
 
     """
     
