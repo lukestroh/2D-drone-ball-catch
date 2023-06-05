@@ -69,8 +69,13 @@ class Drone(DroneBody):
                       [0,0,0],
                       [1.0/self.m,0,-1.0],
                       [0,1.0/self.Ixx,0]])
+        print(A, B)
 
         return A, B
+    
+    def update_mass(self, ball: ball.Ball) -> None:
+        self.m = self.m + ball.mass
+        return
 
     def compute_control(self) -> np.ndarray:
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
@@ -149,10 +154,11 @@ class Drone(DroneBody):
     
     """ TODO:
         # Code
-        Finish detect_impact
-        update moment of inertia for original body (done)
+        *Finish detect_impact
+        *update moment of inertia for original body (done)
         create function to update MOI after impact (done?)
-        create function that fixes ball to drone body (corresponding function in Ball?)
+            needs updated COM
+        *create function that fixes ball to drone body (corresponding function in Ball?)
         write impulse_response function
             append this to current datatype? syncing time and state important
 
@@ -183,10 +189,14 @@ class Drone(DroneBody):
     def _get_ball_impact_loc(self):
         return
     
+    def update_center_of_mass(self):
+        return
+    
     def update_moment_of_inertia(self, ball: ball.Ball) -> None:
-        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass * self.L**2) + ((2/5) * 0.05* 0.03**2)
-        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * 0.05 * 0.03**2)
-        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * 0.05 * 0.03**2)
+        """ Change the moment of inertia due to the addition of the ball and location, """
+        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass * self.L**2) + ((2/5) * ball.mass * ball.radius**2)
+        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * ball.mass * ball.radius**2)
+        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * ball.mass * ball.radius**2)
         return
 
     

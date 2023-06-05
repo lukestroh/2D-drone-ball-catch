@@ -17,7 +17,7 @@ def main():
         start_y = 10.0, # m
         start_vx = 1.0, # m/s
         start_vy = 0, # m/s
-        ball_mass = 0.05, # kg
+        ball_mass = 0.5, # kg
         ball_radius = 0.03, # m
         dt = dt #s
     )
@@ -62,6 +62,7 @@ def main():
                 print(ball.state, drone.state)
                 drone.update_moment_of_inertia(ball=ball)
                 drone.update_target_state(drone.state[0], drone.state[1], drone.state[2], drone.state[3], drone.state[4], drone.state[5])
+                drone.update_mass(ball=ball)
                 drone.A, drone.B = drone.linearize_dynamics()
                 
         else:
