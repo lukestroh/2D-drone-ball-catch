@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.constants as sc
 
-
 class Ball():
     def __init__(
             self,
@@ -27,8 +26,8 @@ class Ball():
         self.dt = dt
         return
 
-    def step(self, drone_state = None):
-        if drone_state:
+    def step(self, collided: bool = None, drone_state = None):
+        if collided:
             ... # TODO
 
         else:
@@ -37,9 +36,12 @@ class Ball():
             self.y += self.vy * self.dt
             
             if (self.y - self.radius <= 0):
+                self.vx = 0
                 self.y = 0
                 self.vy = 0
         
         self.state = [self.x, self.y, self.vx, self.vy]
         return
+    
+
         
