@@ -151,7 +151,7 @@ class Drone(DroneBody):
         # Code
         Finish detect_impact
         update moment of inertia for original body (done)
-        create function to update MOI after impact
+        create function to update MOI after impact (done?)
         create function that fixes ball to drone body (corresponding function in Ball?)
         write impulse_response function
             append this to current datatype? syncing time and state important
