@@ -54,7 +54,6 @@ class Drone(DroneBody):
         self.dt = dt
         return
 
-    
     def linearize_dynamics(self) -> Tuple[np.ndarray]:
         """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
@@ -121,13 +120,6 @@ class Drone(DroneBody):
             self.y - k * np.sin(self.phi - theta)
         )
 
-        # Create ax + by + c = 0 from corners
-        # slope = (body_right_corner_loc[1] - body_left_corner_loc[1]) / (body_right_corner_loc[0] - body_left_corner_loc[0])
-        # intercept = body_left_corner_loc[1] - slope * body_left_corner_loc[0]
-        # a = 1
-        # b = -1/slope
-        # c = intercept/slope
-
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
         a = body_right_corner_loc[1] - body_left_corner_loc[1]
         b = body_left_corner_loc[0] - body_right_corner_loc[0]
@@ -136,12 +128,13 @@ class Drone(DroneBody):
             body_left_corner_loc[0] * body_right_corner_loc[1]
         )
 
-        d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
-
         # distance between a point and a line:
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
+        d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
+
         # If the distance - ball radius <=0, then we have hit the drone
+        # TODO: check if this is the drone line or if it's just anywhere on the line?
         if d - ball.radius <= 0:
             return True
         else:
@@ -161,9 +154,7 @@ class Drone(DroneBody):
         Generate control plots
         Generate Force/torque plots
         Generate ball plot?
-
     """
-    
     
     def step(self) -> None:
         """ Perform a single movement iteration by updating the state """
@@ -177,8 +168,7 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
-
-
+    
     def _get_ball_impact_loc(self):
         return
     
@@ -194,12 +184,19 @@ class Drone(DroneBody):
         
         time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
 
+        # Update MOI for system
         self.update_moment_of_inertia()
+
+        # Get the new system
         self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-        C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        # C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        # C = np.array([1,0,0,0,0,0])
+        C = np.identity(6)
         D = 0
         sys = ct.StateSpace(self.A, self.B, C, D)
-        data = ct.impulse_response(sys=sys, T=time)
+        
+        # Get the impulse response? step_reponse? initial_response?
+        data = ct.step_response(sys=sys, T=time, X0=self.state)
 
         return data
     

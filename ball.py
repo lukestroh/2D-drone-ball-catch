@@ -26,8 +26,8 @@ class Ball():
         self.dt = dt
         return
 
-    def step(self, drone_state = None):
-        if drone_state:
+    def step(self, collided: bool = None, drone_state = None):
+        if collided:
             ... # TODO
 
         else:
@@ -43,7 +43,5 @@ class Ball():
         self.state = [self.x, self.y, self.vx, self.vy]
         return
     
-    def update_loc_from_drone(self):
-        
-        return
+
         

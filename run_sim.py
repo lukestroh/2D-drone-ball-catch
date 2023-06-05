@@ -4,6 +4,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+from pprint import pprint
+
 
 def main():
     dt = 0.001
@@ -36,31 +38,62 @@ def main():
     ball_states = np.zeros((len(ball.state), int(sim_time/dt)), dtype=float)
 
     i = 0
-    while True:
+    collided = False
+    while i < int(sim_time/dt):
+        if not collided:
+            # timesteps[i] = time
+            ball_states[:,i] = ball.state
+            drone_states[:,i] = drone.state
+            ball.step()
+            drone.step()
 
-        # timesteps[i] = time
-        ball_states[:,i] = ball.state
-        drone_states[:,i] = drone.state
-        ball.step()
-        drone.step()
+            ball_pred = drone.predict_ball_position(ball=ball)
+            drone.update_target_state(ball_pred, drone.y, 0, 0, 0, 0)
+            
+            time += dt
+            
+            if ball.y < drone.y:
+                break
+            
+            collided = drone.detect_impact(ball=ball)
+            if collided:
+                print(ball.state, drone.state)
+                drone.update_moment_of_inertia()
+                drone.update_target_state(drone.state[0], drone.state[1], drone.state[2], drone.state[3], drone.state[4], drone.state[5])
+                drone.A, drone.B = drone.linearize_dynamics()
+                
+        else:
+            ball_states[:,i] = ball.state
+            drone_states[:,i] = drone.state
+            ball.step(collided=True, drone_state=drone.state)
+            drone.step()
 
-        ball_pred = drone.predict_ball_position(ball=ball)
-        drone.update_target_state(ball_pred, drone.y, 0, 0, 0, 0)
-        
-        time += dt
-        
-        if ball.y < drone.y:
-            break
-
-        if drone.detect_impact(ball=ball):
-            print("True!")
-            break
-        
         i += 1
+        
 
-    imp_data = drone.get_impulse_resp(t0=time,  sim_time=sim_time, i=i)
+    # while True:
+    #     if time >= 5:
+    #         break
+    #     drone_states[:,i] = drone.state
+    #     drone.step()
+    #     time += dt
+    #     i += 1
 
-    print(imp_data.outputs)
+
+    # # Get the response from the impulse of the ball
+    # imp_data = drone.get_impulse_resp(t0=time, sim_time=sim_time, i=i)
+    # pprint(vars(imp_data))
+
+    # idx = i
+    # # Append impulse data to original data
+    # while i < int(sim_time/dt):
+    #     drone_states[:,i] = imp_data.x[:,i-idx]
+    #     i += 1
+
+    
+
+
+
     # Plotting
     plt.plot(timesteps, drone_states.transpose())
     plt.legend(["x", "y", "phi", "vx", "vy", "vphi"])
