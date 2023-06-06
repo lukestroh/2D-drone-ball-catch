@@ -42,8 +42,8 @@ class Drone(DroneBody):
 
         # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
-        self.Q = np.diag([10,10,1,1,1,1])
-        self.R = np.diag([1,1,1])
+        self.Q = np.diag([10,10,5,1,1,1])
+        self.R = np.diag([1,1])
         self.K = self.compute_LQR_gain()
 
         # Max motor thrust
@@ -51,49 +51,43 @@ class Drone(DroneBody):
 
 
         self.target_state = np.zeros(6)
-        self.drag = 0.1
         self.dt = dt
         return
 
     
-    def linearize_dynamics(self, ball: ball.Ball = None, impulse: bool = False) -> Tuple[np.ndarray]:
-        """ Create the linearized dynamics matrices """
+    def linearize_dynamics(self, ball: ball.Ball = None) -> Tuple[np.ndarray]:
+        """ 
+        Create the linearized dynamics matrices
+        u = [u1, u2, g]
+            u1 = propeller direction force
+            u2 = torque on drone
+            g = force due to gravity
+        """
         A = np.array([[0,0,0,1.0,0,0],
                         [0,0,0,0,1.0,0],
                         [0,0,0,0,0,1.0],
                         [0,0,-self.g,0,0,0],
                         [0,0,0,0,0,0],
-                        [0,0,0,0,0,0],])
+                        [0,0,0,0,0,0]])
         
 
         if not ball:
             B = np.array([
-                        [0,0,0],
-                        [0,0,0],
-                        [0,0,0],
-                        [0,0,0],
-                        [1.0/self.m,0,-1.0],
-                        [0,1.0/self.Ixx,0]])
+                        [0, 0],
+                        [0, 0],
+                        [0, 0],
+                        [0, 0],
+                        [1/self.m, 0],
+                        [0, 1/self.Ixx]])
         else:
-            if impulse:
-                Fx = ball.mass * ball.vx/self.dt
-                Fy = ball.mass * ball.vy/self.dt
-                B = np.array([
-                            [Fx,0,0],
-                            [0,Fy,0],
-                            [0,0,0],
-                            [0,0,0],
-                            [1.0/(self.m+ball.mass),0,-1.0],
-                            [0,1.0/self.Ixx,0]])
-            else:
-                B = np.array([
-                            [0,0,0],
-                            [0,0,0],
-                            [0,0,0],
-                            [0,0,0],
-                            [1.0/(self.m+ball.mass),0,-1.0],
-                            [0,1.0/self.Ixx,0]])
-
+            B = np.array([
+                        [0,0],
+                        [0,0],
+                        [0,0],
+                        [0,0],
+                        [1/(self.m+ball.mass),0],
+                        [0,1/self.Ixx]])
+                
         return A, B
     
     def compute_LQR_gain(self) -> None:
@@ -145,7 +139,7 @@ class Drone(DroneBody):
         )
         body_left_corner_loc = (
             self.x - k * np.cos(self.phi + theta),
-            self.y + k * np.sin(self.phi + theta)
+            self.y + k * np.sin(self.phi + np.pi-theta)
         )
 
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
@@ -158,7 +152,7 @@ class Drone(DroneBody):
 
         d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
 
-        # distance between a point and a line:
+        # distance between a point p and a line:
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
         # If the distance - ball radius <=0, then we have hit the drone
@@ -206,6 +200,23 @@ class Drone(DroneBody):
         self.Ixx = (self.Ixx + self.m * d_self**2) + (ball.Ixx + ball.mass * d_ball**2)
         return
     
+    def get_impulse_resp(
+            self,
+            t0: float,
+            sim_time: float,
+            i: int
+        ) -> ct.TimeResponseData:
+        
+        time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
+
+        self.update_moment_of_inertia()
+        self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
+        C = np.identity(6)
+        D = 0
+        sys = ct.StateSpace(self.A, self.B, C, D)
+        data = ct.impulse_response(sys=sys, T=time, X0=self.state)
+
+        return data
 
         
     def simulate(self):

@@ -4,22 +4,20 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from pprint import pprint
-
 class SimError(Exception):
     pass
 
 def main():
     dt = 0.001
     t0 = 0
-    sim_time = 6 # s
+    sim_time = 10 # s
 
     ball = Ball(
         start_x = 0, # m
         start_y = 10.0, # m
-        start_vx = 0.0, # m/s
+        start_vx = 1.0, # m/s
         start_vy = 0, # m/s
-        ball_mass = 0.03, # kg
+        ball_mass = 0.25, # kg
         ball_radius = 0.03, # m
         dt = dt #s
     )
@@ -63,24 +61,32 @@ def main():
             # Check for collision
             collided = drone.detect_impact(ball=ball)
             if collided:
-
-                print(ball.state, drone.state)
-
                 drone.update_moment_of_inertia(ball=ball)
                 drone.update_target_state(drone.x, drone.y, 0, 0, 0, 0)
-                drone.A, drone.B = drone.linearize_dynamics(ball=ball, impulse=True)
+                drone.A, drone.B = drone.linearize_dynamics(ball=ball)
                 drone.K = drone.compute_LQR_gain()
                 impulse = True
 
         # If collision has occurred     
         else:
-            # Add the force due to impulse to B for one timestep
+            # If impulse step, step with force due to impulse to B for one timestep
             if impulse:
+                # Conservation of momentum
+                drone.vx = (drone.m * drone.vx + ball.mass * ball.vx) / (drone.m + ball.mass)
+                drone.vy = (drone.m * drone.vy + ball.mass * ball.vy) / (drone.m + ball.mass)
+                drone.state = [
+                    drone.state[0],
+                    drone.state[1],
+                    drone.state[2],
+                    drone.vx,
+                    drone.vy,
+                    drone.state[5]
+                ]
+                
                 ball.step(collided=True, drone=drone)
                 drone.step()
-                drone.A, drone.b = drone.linearize_dynamics(ball=ball, impulse=False)
-                drone.K = drone.compute_LQR_gain()
                 impulse = False
+
             else:
                 ball.step(collided=True, drone=drone)
                 drone.step()
