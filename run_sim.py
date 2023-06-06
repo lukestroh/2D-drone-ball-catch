@@ -17,13 +17,13 @@ def main():
         start_y = 10.0, # m
         start_vx = 1.0, # m/s
         start_vy = 0, # m/s
-        ball_mass = 0.5, # kg
+        ball_mass = 0.03, # kg
         ball_radius = 0.03, # m
         dt = dt #s
     )
 
     drone = Drone(
-        mass = 0.18, # kg
+        mass = 0.25, # kg
         body_height = 0.1, # m
         body_width = 0.36, # m
         body_length = 0.36, # m
@@ -36,11 +36,11 @@ def main():
     timesteps = np.linspace(0,5,int(sim_time/dt))
     drone_states = np.zeros((len(drone.state), int(sim_time/dt)), dtype=float)
     ball_states = np.zeros((len(ball.state), int(sim_time/dt)), dtype=float)
-    print("MOI1: ", drone.Ixx)
+
     i = 0
     collided = False
+    impulse = False
     while i < int(sim_time/dt):
-        # timesteps[i] = time
         ball_states[:,i] = ball.state
         drone_states[:,i] = drone.state
 
@@ -63,36 +63,24 @@ def main():
                 # print(ball.state, drone.state)
 
                 drone.update_moment_of_inertia(ball=ball)
-                drone.update_target_state(drone.state[0], drone.state[1], drone.state[2], drone.state[3], drone.state[4], drone.state[5])
-                drone.A, drone.B = drone.linearize_dynamics()
+                drone.update_target_state(drone.x, drone.y, 0, 0, 0, 0)
+                drone.A, drone.B = drone.linearize_dynamics(ball=ball, impulse=True)
                 drone.K = drone.compute_LQR_gain()
+                impulse = True
                 
         else:
-            ball.step(collided=True, drone=drone)
-            drone.step()
+            if impulse:
+                ball.step(collided=True, drone=drone)
+                drone.step()
+                drone.A, drone.b = drone.linearize_dynamics(ball=ball, impulse=False)
+                drone.K = drone.compute_LQR_gain()
+                impulse = False
+            else:
+                ball.step(collided=True, drone=drone)
+                drone.step()
 
         i += 1
-    
-    print("MOI2: ", drone.Ixx)
 
-    # while True:
-    #     if time >= 5:
-    #         break
-    #     drone_states[:,i] = drone.state
-    #     drone.step()
-    #     time += dt
-    #     i += 1
-
-
-    # # Get the response from the impulse of the ball
-    # imp_data = drone.get_impulse_resp(t0=time, sim_time=sim_time, i=i)
-    # pprint(vars(imp_data))
-
-    # idx = i
-    # # Append impulse data to original data
-    # while i < int(sim_time/dt):
-    #     drone_states[:,i] = imp_data.x[:,i-idx]
-    #     i += 1
 
     # Plotting
     fig=plt.figure()

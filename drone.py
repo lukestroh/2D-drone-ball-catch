@@ -56,7 +56,7 @@ class Drone(DroneBody):
         return
 
     
-    def linearize_dynamics(self, ball: ball.Ball = None) -> Tuple[np.ndarray]:
+    def linearize_dynamics(self, ball: ball.Ball = None, impulse: bool = False) -> Tuple[np.ndarray]:
         """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
                         [0,0,0,0,1.0,0],
@@ -67,19 +67,34 @@ class Drone(DroneBody):
         
 
         if not ball:
-            B = np.array([[0,0,0],
+            B = np.array([
+                        [0,0,0],
                         [0,0,0],
                         [0,0,0],
                         [0,0,0],
                         [1.0/self.m,0,-1.0],
                         [0,1.0/self.Ixx,0]])
         else:
-            B = np.array([[0,0,0],
-                        [0,0,0],
-                        [0,0,0],
-                        [0,0,0],
-                        [1.0/(self.m+ball.mass),0,-1.0],
-                        [0,1.0/self.Ixx,0]])
+            if impulse:
+                Fx = ball.mass * ball.vx/self.dt
+                Fy = ball.mass * ball.vy/self.dt
+                print(ball.vx, ball.vy)
+                print(Fx, Fy)
+                B = np.array([
+                            [Fx,0,0],
+                            [0,Fy,0],
+                            [0,0,0],
+                            [0,0,0],
+                            [1.0/(self.m+ball.mass),0,-1.0],
+                            [0,1.0/self.Ixx,0]])
+            else:
+                B = np.array([
+                            [0,0,0],
+                            [0,0,0],
+                            [0,0,0],
+                            [0,0,0],
+                            [1.0/(self.m+ball.mass),0,-1.0],
+                            [0,1.0/self.Ixx,0]])
 
         return A, B
     
@@ -232,9 +247,10 @@ class Drone(DroneBody):
         
         time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
 
-        self.update_moment_of_inertia()
-        self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-        C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        # self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
+        # C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        C = np.identity(6)
+        C = np.array([1,0,0,0,0,0])
         D = 0
         sys = ct.StateSpace(self.A, self.B, C, D)
         data = ct.impulse_response(sys=sys, T=time, X0=self.state)
