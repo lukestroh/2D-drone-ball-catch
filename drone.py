@@ -55,27 +55,38 @@ class Drone(DroneBody):
         return
 
     
-    def linearize_dynamics(self) -> Tuple[np.ndarray]:
+    def linearize_dynamics(self, ball: ball.Ball = None) -> Tuple[np.ndarray]:
         """ Create the linearized dynamics matrices """
         A = np.array([[0,0,0,1.0,0,0],
-                      [0,0,0,0,1.0,0],
-                      [0,0,0,0,0,1.0],
-                      [0,0,-self.g,0,0,0],
-                      [0,0,0,0,0,0],
-                      [0,0,0,0,0,0],])
-        B = np.array([[0,0,0],
-                      [0,0,0],
-                      [0,0,0],
-                      [0,0,0],
-                      [1.0/self.m,0,-1.0],
-                      [0,1.0/self.Ixx,0]])
+                        [0,0,0,0,1.0,0],
+                        [0,0,0,0,0,1.0],
+                        [0,0,-self.g,0,0,0],
+                        [0,0,0,0,0,0],
+                        [0,0,0,0,0,0],])
+        
+
+        if not ball:
+            B = np.array([[0,0,0],
+                        [0,0,0],
+                        [0,0,0],
+                        [0,0,0],
+                        [1.0/self.m,0,-1.0],
+                        [0,1.0/self.Ixx,0]])
+        else:
+            B = np.array([[0,0,0],
+                        [0,0,0],
+                        [0,0,0],
+                        [0,0,0],
+                        [1.0/(self.m+ball.mass),0,-1.0],
+                        [0,1.0/self.Ixx,0]])
+
         print(A, B)
 
         return A, B
     
-    def update_mass(self, ball: ball.Ball) -> None:
-        self.m = self.m + ball.mass
-        return
+    # def update_mass(self, ball: ball.Ball) -> None:
+    #     self.m = self.m + ball.mass
+    #     return
 
     def compute_control(self) -> np.ndarray:
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
@@ -151,6 +162,43 @@ class Drone(DroneBody):
             return True
         else:
             return False
+  
+    
+    def step(self) -> None:
+        """ Perform a single movement iteration by updating the state """
+        control = self.compute_control()
+        state_dot = self.A @ self.state + self.B @ control
+        self.state = self.state + state_dot * self.dt
+        self.x = self.state[0]
+        self.y = self.state[1]
+        self.phi = self.state[2]
+        self.vx = self.state[3]
+        self.vy = self.state[4]
+        self.vphi = self.state[5]
+        return
+
+
+    def _get_ball_impact_loc(self):
+        return
+    
+    def get_center_of_mass(self, ball: ball.Ball) -> Tuple[float]:
+        center_of_mass = (
+            (self.x * self.m + ball.x * ball.mass) / (self.m + ball.mass),
+            (self.y * self.m + ball.y * ball.mass) / (self.m + ball.mass)
+        )
+        return center_of_mass
+    
+    def update_moment_of_inertia(self, ball: ball.Ball) -> None:
+        """ Change the moment of inertia due to the addition of the ball and location, """
+        # TODO: update MOI based on new COM
+
+        # http://astro1.panet.utoledo.edu/~mheben/PHYS_2130/Chapter11-1_mh.pdf
+        center_of_mass = self.get_center_of_mass(ball=ball)
+        d_self = np.sqrt((self.x - center_of_mass[0])**2 + (self.y - center_of_mass[1])**2)
+        d_ball = np.sqrt((ball.x - center_of_mass[0])**2 + (ball.y - center_of_mass[1])**2)
+
+        self.Ixx = (self.Ixx + self.m * d_self**2) + (ball.Ixx + ball.mass * d_ball**2)
+        return
     
     """ TODO:
         # Code
@@ -170,34 +218,6 @@ class Drone(DroneBody):
         Simplify the animation to make the drone just a rectangle
 
     """
-    
-    
-    def step(self) -> None:
-        """ Perform a single movement iteration by updating the state """
-        control = self.compute_control()
-        state_dot = self.A @ self.state + self.B @ control
-        self.state = self.state + state_dot * self.dt
-        self.x = self.state[0]
-        self.y = self.state[1]
-        self.phi = self.state[2]
-        self.vx = self.state[3]
-        self.vy = self.state[4]
-        self.vphi = self.state[5]
-        return
-
-
-    def _get_ball_impact_loc(self):
-        return
-    
-    def update_center_of_mass(self):
-        return
-    
-    def update_moment_of_inertia(self, ball: ball.Ball) -> None:
-        """ Change the moment of inertia due to the addition of the ball and location, """
-        self.Ixx = self.Ixx + ((2/5) * ball.mass * ball.radius**2)
-        # self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass * self.w**2) + ((2/5) * ball.mass * ball.radius**2)
-        # self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass * self.h**2) + ((2/5) * ball.mass * ball.radius**2)
-        return
 
     
     def get_impulse_resp(

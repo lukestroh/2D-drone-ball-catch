@@ -21,6 +21,7 @@ class Ball():
 
         self.mass = ball_mass
         self.radius = ball_radius
+        self.Ixx = 2 / 5 * self.mass * self.radius**2
 
         self.g = sc.g
         self.dt = dt
