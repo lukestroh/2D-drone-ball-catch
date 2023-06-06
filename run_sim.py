@@ -31,7 +31,6 @@ def main():
         initial_state = [0,1.0,0,0,0,0], # x, y, phi, vx, vy, vphi
         dt = dt # s
     )
-
     
     timesteps = np.linspace(0, sim_time, int(sim_time/dt))
     drone_states = np.zeros((len(drone.state), int(sim_time/dt)), dtype=float)
@@ -117,6 +116,25 @@ def main():
     plt.show()
 
     return
+
+
+""" TODO:
+    # Code
+    *Finish detect_impact
+    *update moment of inertia for original body (done)
+    *create function to update MOI after impact (done?)
+        *needs updated COM
+    *create function that fixes ball to drone body (corresponding function in Ball?)
+    *write impulse_response function
+        *append this to current datatype? syncing time and state important
+
+    # Data
+    Figure out if data makes sense (Does drone flip upside down?)
+    Generate control plots
+    Generate Force/torque plots
+    Generate ball plot?
+    Simplify the animation to make the drone just a rectangle
+"""
 
 
 if __name__ == "__main__":

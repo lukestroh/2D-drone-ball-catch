@@ -98,16 +98,11 @@ class Drone(DroneBody):
 
         return A, B
     
-    # def update_mass(self, ball: ball.Ball) -> None:
-    #     self.m = self.m + ball.mass
-    #     return
-
     def compute_LQR_gain(self) -> None:
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
         return K
 
     def compute_control(self) -> np.ndarray:
-        # K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R) # TODO: does LQR need to be calculated every timestep?
         control = -self.K @ (self.state - self.target_state)
         return control
     
@@ -209,7 +204,7 @@ class Drone(DroneBody):
     def update_moment_of_inertia(self, ball: ball.Ball) -> None:
         """ Change the moment of inertia due to the addition of the ball and location, """
         # TODO: update MOI based on new COM
-
+        # Double check if this is correct
         # http://astro1.panet.utoledo.edu/~mheben/PHYS_2130/Chapter11-1_mh.pdf
         center_of_mass = self.get_center_of_mass(ball=ball)
         d_self = np.sqrt((self.x - center_of_mass[0])**2 + (self.y - center_of_mass[1])**2)
@@ -218,44 +213,7 @@ class Drone(DroneBody):
         self.Ixx = (self.Ixx + self.m * d_self**2) + (ball.Ixx + ball.mass * d_ball**2)
         return
     
-    """ TODO:
-        # Code
-        *Finish detect_impact
-        *update moment of inertia for original body (done)
-        create function to update MOI after impact (done?)
-            needs updated COM
-        *create function that fixes ball to drone body (corresponding function in Ball?)
-        write impulse_response function
-            append this to current datatype? syncing time and state important
 
-        # Data
-        Figure out if data makes sense (Does drone flip upside down?)
-        Generate control plots
-        Generate Force/torque plots
-        Generate ball plot?
-        Simplify the animation to make the drone just a rectangle
-
-    """
-
-    
-    # def get_impulse_resp(
-    #         self,
-    #         t0: float,
-    #         sim_time: float,
-    #         i: int
-    #     ) -> ct.TimeResponseData:
-        
-    #     time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
-
-    #     # self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-    #     # C = np.zeros((self.B.shape[1], self.B.shape[0]))
-    #     C = np.identity(6)
-    #     C = np.array([1,0,0,0,0,0])
-    #     D = 0
-    #     sys = ct.StateSpace(self.A, self.B, C, D)
-    #     data = ct.impulse_response(sys=sys, T=time, X0=self.state)
-
-    #     return data
         
     def simulate(self):
         num_steps = int(5 / self.dt) + 1
