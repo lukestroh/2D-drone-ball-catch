@@ -44,6 +44,7 @@ class Drone(DroneBody):
         self.A, self.B = self.linearize_dynamics()
         self.Q = np.diag([10.0,1.0,1.0,1.0,1.0,1.0])
         self.R = np.diag([1,1,1])
+        self.K = self.compute_LQR_gain()
 
         # Max motor thrust
         self.max_motor_thrust = 1.7658
@@ -80,17 +81,19 @@ class Drone(DroneBody):
                         [1.0/(self.m+ball.mass),0,-1.0],
                         [0,1.0/self.Ixx,0]])
 
-        print(A, B)
-
         return A, B
     
     # def update_mass(self, ball: ball.Ball) -> None:
     #     self.m = self.m + ball.mass
     #     return
 
-    def compute_control(self) -> np.ndarray:
+    def compute_LQR_gain(self) -> None:
         K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
-        control = -K @ (self.state - self.target_state)
+        return K
+
+    def compute_control(self) -> np.ndarray:
+        # K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R) # TODO: does LQR need to be calculated every timestep?
+        control = -self.K @ (self.state - self.target_state)
         return control
     
     def predict_ball_position(self, ball: ball.Ball)-> float:
@@ -129,7 +132,7 @@ class Drone(DroneBody):
         k = np.sqrt((self.w/2)**2 + (self.h/2)**2)
         theta = np.arctan2(self.h, self.w)
         body_right_corner_loc = (
-            self.x + k * np.cos(self.phi + theta), # TODO: Fix these angles? Should be plus?
+            self.x + k * np.cos(self.phi + theta),
             self.y + k * np.sin(self.phi + theta)
         )
         body_left_corner_loc = (
@@ -234,7 +237,7 @@ class Drone(DroneBody):
         C = np.zeros((self.B.shape[1], self.B.shape[0]))
         D = 0
         sys = ct.StateSpace(self.A, self.B, C, D)
-        data = ct.impulse_response(sys=sys, T=time)
+        data = ct.impulse_response(sys=sys, T=time, X0=self.state)
 
         return data
         

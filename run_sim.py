@@ -36,7 +36,7 @@ def main():
     timesteps = np.linspace(0,5,int(sim_time/dt))
     drone_states = np.zeros((len(drone.state), int(sim_time/dt)), dtype=float)
     ball_states = np.zeros((len(ball.state), int(sim_time/dt)), dtype=float)
-
+    print("MOI1: ", drone.Ixx)
     i = 0
     collided = False
     while i < int(sim_time/dt):
@@ -59,20 +59,21 @@ def main():
             # Check for collision
             collided = drone.detect_impact(ball=ball)
             if collided:
-                
-                print(ball.state, drone.state)
+
+                # print(ball.state, drone.state)
 
                 drone.update_moment_of_inertia(ball=ball)
                 drone.update_target_state(drone.state[0], drone.state[1], drone.state[2], drone.state[3], drone.state[4], drone.state[5])
                 drone.A, drone.B = drone.linearize_dynamics()
+                drone.K = drone.compute_LQR_gain()
                 
         else:
             ball.step(collided=True, drone=drone)
             drone.step()
 
-
         i += 1
-        
+    
+    print("MOI2: ", drone.Ixx)
 
     # while True:
     #     if time >= 5:
