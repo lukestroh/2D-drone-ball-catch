@@ -78,8 +78,6 @@ class Drone(DroneBody):
             if impulse:
                 Fx = ball.mass * ball.vx/self.dt
                 Fy = ball.mass * ball.vy/self.dt
-                print(ball.vx, ball.vy)
-                print(Fx, Fy)
                 B = np.array([
                             [Fx,0,0],
                             [0,Fy,0],
@@ -150,13 +148,6 @@ class Drone(DroneBody):
             self.y + k * np.sin(self.phi + theta)
         )
 
-        # Create ax + by + c = 0 from corners
-        # slope = (body_right_corner_loc[1] - body_left_corner_loc[1]) / (body_right_corner_loc[0] - body_left_corner_loc[0])
-        # intercept = body_left_corner_loc[1] - slope * body_left_corner_loc[0]
-        # a = 1
-        # b = -1/slope
-        # c = intercept/slope
-
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
         a = body_right_corner_loc[1] - body_left_corner_loc[1]
         b = body_left_corner_loc[0] - body_right_corner_loc[0]
@@ -171,6 +162,8 @@ class Drone(DroneBody):
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
         # If the distance - ball radius <=0, then we have hit the drone
+
+        # TODO: add to conditions that the ball.x must also be within x limits of drone
         if d - ball.radius <= 0:
             return True
         else:
