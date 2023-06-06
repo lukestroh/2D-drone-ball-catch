@@ -42,8 +42,10 @@ class Ball():
             # update vx, vy?? does this work if ball is on left side of drone COM?
             # would vx, vy = angular momentum of drone?
 
-            self.vx = 0
-            self.vy = 0           
+            # TODO: check if these are right:
+            # https://math.stackexchange.com/questions/2444965/relationship-between-cartesian-velocity-and-polar-velocity
+            self.vx = -d * drone.vphi * np.sin(theta)
+            self.vy = d * drone.vphi * np.cos(theta)          
 
 
         else:

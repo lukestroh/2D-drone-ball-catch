@@ -42,7 +42,7 @@ class Drone(DroneBody):
 
         # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
-        self.Q = np.diag([10.0,1.0,1.0,1.0,1.0,1.0])
+        self.Q = np.diag([10,10,1,1,1,1])
         self.R = np.diag([1,1,1])
         self.K = self.compute_LQR_gain()
 
@@ -238,24 +238,24 @@ class Drone(DroneBody):
     """
 
     
-    def get_impulse_resp(
-            self,
-            t0: float,
-            sim_time: float,
-            i: int
-        ) -> ct.TimeResponseData:
+    # def get_impulse_resp(
+    #         self,
+    #         t0: float,
+    #         sim_time: float,
+    #         i: int
+    #     ) -> ct.TimeResponseData:
         
-        time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
+    #     time = np.linspace(t0, sim_time, int(sim_time/self.dt) - i)
 
-        # self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-        # C = np.zeros((self.B.shape[1], self.B.shape[0]))
-        C = np.identity(6)
-        C = np.array([1,0,0,0,0,0])
-        D = 0
-        sys = ct.StateSpace(self.A, self.B, C, D)
-        data = ct.impulse_response(sys=sys, T=time, X0=self.state)
+    #     # self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
+    #     # C = np.zeros((self.B.shape[1], self.B.shape[0]))
+    #     C = np.identity(6)
+    #     C = np.array([1,0,0,0,0,0])
+    #     D = 0
+    #     sys = ct.StateSpace(self.A, self.B, C, D)
+    #     data = ct.impulse_response(sys=sys, T=time, X0=self.state)
 
-        return data
+    #     return data
         
     def simulate(self):
         num_steps = int(5 / self.dt) + 1
