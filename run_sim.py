@@ -97,14 +97,17 @@ def main():
     # Plotting
     # x
     fig=plt.figure()
+    plt.title(f"LQR response of a 2D quadcopter catching a ball")
+    plt.tight_layout()
+
     ax1 = fig.add_subplot(311)
     ax1.plot(timesteps, drone_states[0], 'k')
     ax1.plot(timesteps, drone_states[3], '#ff7f0e')
     ax1.plot(timesteps, np.zeros(len(timesteps)), 'k--', linewidth=0.75)
     ax1.legend(["x", "vx"], loc=1, fontsize=8)
     ax1.set_xlim([t0,sim_time])
-    ax1.set_xlabel("Time (s)")
-    ax1.set_ylabel("Horizontal Location (m)")
+    # ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Horizontal Position (m)/(m/s)")
     #plt.xlim([0,5])
 
     # y
@@ -113,8 +116,8 @@ def main():
     ax2.plot(timesteps, drone_states[4], '#ff7f0e')
     ax2.legend(["y", "vy"], loc=1, fontsize=8)
     ax2.set_xlim([t0,sim_time])
-    ax2.set_xlabel("Time (s)")
-    ax2.set_ylabel("Vertical Location (m)")
+    # ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("Vertical Position (m)/(m/s)")
     #plt.xlim([0,5])
 
     # Phi
@@ -125,7 +128,9 @@ def main():
     ax3.legend(["phi", "vphi"], loc=4, fontsize=8)
     ax3.set_xlim([t0,sim_time])
     ax3.set_xlabel("Time (s)")
-    ax3.set_ylabel("Angle (degrees)")
+    ax3.set_ylabel("Angle (rad)/(rad/s)")
+
+    
     plt.show()
 
     return
