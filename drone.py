@@ -1,8 +1,6 @@
 from drone_body import DroneBody
 import ball
 
-from scipy.integrate import solve_ivp
-import scipy.constants as sc
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
@@ -12,6 +10,8 @@ from typing import List, Tuple
 
 # source https://cookierobotics.com/052/
 
+class SimError(Exception):
+    pass
 
 class Drone(DroneBody):
     def __init__(
@@ -26,7 +26,13 @@ class Drone(DroneBody):
         ) -> None:
 
         # Init drone body
-        super().__init__(mass, body_height, body_length, body_width, arm_length)
+        super().__init__(
+            mass=mass,
+            body_height=body_height,
+            body_length=body_length,
+            body_width=body_width,
+            arm_length=arm_length
+        )
 
         # Drone state
         self.state = initial_state
@@ -38,7 +44,7 @@ class Drone(DroneBody):
         self.vphi = initial_state[5]
 
         # Center of mass
-        self.com = [self.x, self.y]
+        # self.com = [self.x, self.y]
 
         # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
@@ -50,7 +56,7 @@ class Drone(DroneBody):
         self.max_motor_thrust = 1.7658
 
 
-        self.target_state = np.zeros(6)
+        self.target_state = self.state
         self.dt = dt
         return
 
@@ -78,7 +84,7 @@ class Drone(DroneBody):
                         [0, 0],
                         [0, 0],
                         [1/self.m, 0],
-                        [0, 1/self.Ixx]])
+                        [0, 1/self.Izz]])
         else:
             B = np.array([
                         [0,0],
@@ -86,7 +92,7 @@ class Drone(DroneBody):
                         [0,0],
                         [0,0],
                         [1/(self.m+ball.mass),0],
-                        [0,1/self.Ixx]])
+                        [0,1/self.Izz]])
                 
         return A, B
     
@@ -95,7 +101,7 @@ class Drone(DroneBody):
         return K
 
     def compute_control(self) -> np.ndarray:
-        control = -self.K @ (self.state - self.target_state)
+        control = -self.K @ (np.subtract(self.state, self.target_state))
         return control
     
     def predict_ball_position(self, ball: ball.Ball)-> float:
@@ -159,7 +165,10 @@ class Drone(DroneBody):
 
         # TODO: add to conditions that the ball.x must also be within x limits of drone
         if d - ball.radius <= 0:
-            return True
+            if (ball.x - ball.radius > body_right_corner_loc[0]) or (ball.x + ball.radius < body_left_corner_loc[0]):
+                return False
+            else:
+                return True
         else:
             return False
   
@@ -176,15 +185,23 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
-
-
-    def _get_ball_impact_loc(self):
-        return
     
+    def _update_motor_locs(self) -> None:
+        self.right_motor_loc = [
+            self.x + (self.w + self.L) * np.cos(self.phi),
+            self.y + (self.w + self.L) * np.sin(self.phi)
+        ]
+        self.left_motor_loc = [
+            self.x - (self.w + self.L) * np.cos(self.phi),
+            self.y + (self.w + self.L) * np.sin(self.phi)
+        ]
+        return
+
     def get_center_of_mass(self, ball: ball.Ball) -> Tuple[float]:
+        self._update_motor_locs()
         center_of_mass = (
-            (self.x * self.m + ball.x * ball.mass) / (self.m + ball.mass),
-            (self.y * self.m + ball.y * ball.mass) / (self.m + ball.mass)
+            ((self.x * self.m) + (self.right_motor_loc[0] * self.motor_mass) + (ball.x * ball.mass)) / (self.m + self.motor_mass + ball.mass),
+            ((self.y * self.m) + (self.right_motor_loc[1] * self.motor_mass) + (ball.y * ball.mass)) / (self.m + self.motor_mass + ball.mass)
         )
         return center_of_mass
     
@@ -196,8 +213,15 @@ class Drone(DroneBody):
         center_of_mass = self.get_center_of_mass(ball=ball)
         d_self = np.sqrt((self.x - center_of_mass[0])**2 + (self.y - center_of_mass[1])**2)
         d_ball = np.sqrt((ball.x - center_of_mass[0])**2 + (ball.y - center_of_mass[1])**2)
+        d_motor_r = np.sqrt((self.right_motor_loc[0] - center_of_mass[0])**2 + (self.right_motor_loc[1] - center_of_mass[1])**2)
+        d_motor_l = np.sqrt((self.left_motor_loc[0] - center_of_mass[0])**2 + (self.left_motor_loc[1] - center_of_mass[1])**2)
 
-        self.Ixx = (self.Ixx + self.m * d_self**2) + (ball.Ixx + ball.mass * d_ball**2)
+        self.Izz = (
+            (self.drone_body_Izz + self.m * d_self**2) + 
+            (self.motor_Izz + self.motor_mass * d_motor_r**2) + 
+            (self.motor_Izz + self.motor_mass * d_motor_l**2) +  
+            (ball.Izz + ball.mass * d_ball**2)
+        )
         return
     
     def get_impulse_resp(
