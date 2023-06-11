@@ -1,8 +1,6 @@
 from drone_body import DroneBody
 import ball
 
-from scipy.integrate import solve_ivp
-import scipy.constants as sc
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
@@ -12,6 +10,8 @@ from typing import List, Tuple
 
 # source https://cookierobotics.com/052/
 
+class SimError(Exception):
+    pass
 
 class Drone(DroneBody):
     def __init__(
@@ -26,7 +26,13 @@ class Drone(DroneBody):
         ) -> None:
 
         # Init drone body
-        super().__init__(mass, body_height, body_length, body_width, arm_length)
+        super().__init__(
+            mass=mass,
+            body_height=body_height,
+            body_length=body_length,
+            body_width=body_width,
+            arm_length=arm_length
+        )
 
         # Drone state
         self.state = initial_state
@@ -38,43 +44,64 @@ class Drone(DroneBody):
         self.vphi = initial_state[5]
 
         # Center of mass
-        self.com = [self.x, self.y]
+        # self.com = [self.x, self.y]
 
         # LQR Dynamics
         self.A, self.B = self.linearize_dynamics()
-        self.Q = np.diag([10.0,1.0,1.0,1.0,1.0,1.0])
-        self.R = np.diag([1,1,1])
+        self.Q = np.diag([10,10,5,1,1,1])
+        self.R = np.diag([1,1])
+        self.K = self.compute_LQR_gain()
 
         # Max motor thrust
         self.max_motor_thrust = 1.7658
 
 
-        self.target_state = np.zeros(6)
-        self.drag = 0.1
+        self.target_state = self.state
         self.dt = dt
         return
 
     
-    def linearize_dynamics(self) -> Tuple[np.ndarray]:
-        """ Create the linearized dynamics matrices """
-        A = np.array([[0,0,0,1.0,0,0],
-                      [0,0,0,0,1.0,0],
-                      [0,0,0,0,0,1.0],
-                      [0,0,-self.g,0,0,0],
-                      [0,0,0,0,0,0],
-                      [0,0,0,0,0,0],])
-        B = np.array([[0,0,0],
-                      [0,0,0],
-                      [0,0,0],
-                      [0,0,0],
-                      [1.0/self.m,0,-1.0],
-                      [0,1.0/self.Ixx,0]])
+    def linearize_dynamics(self, ball: ball.Ball = None) -> Tuple[np.ndarray]:
+        """ 
+        Create the linearized dynamics matrices
+        u = [u1, u2, g]
+            u1 = propeller direction force
+            u2 = torque on drone
+            g = force due to gravity
+        """
+        A = np.array([[0,0,0,1,0,0],
+                        [0,0,0,0,1,0],
+                        [0,0,0,0,0,1],
+                        [0,0,-self.g,0,0,0],
+                        [0,0,0,0,0,0],
+                        [0,0,0,0,0,0]])
+        
 
+        if not ball:
+            B = np.array([
+                        [0, 0],
+                        [0, 0],
+                        [0, 0],
+                        [0, 0],
+                        [1/self.m, 0],
+                        [0, 1/self.Izz]])
+        else:
+            B = np.array([
+                        [0,0],
+                        [0,0],
+                        [0,0],
+                        [0,0],
+                        [1/(self.m+ball.mass),0],
+                        [0,1/self.Izz]])
+                
         return A, B
+    
+    def compute_LQR_gain(self) -> None:
+        K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
+        return K
 
     def compute_control(self) -> np.ndarray:
-        K, _, _ = ct.lqr(self.A, self.B, self.Q, self.R)
-        control = -K @ (self.state - self.target_state)
+        control = -self.K @ (np.subtract(self.state, self.target_state))
         return control
     
     def predict_ball_position(self, ball: ball.Ball)-> float:
@@ -113,20 +140,13 @@ class Drone(DroneBody):
         k = np.sqrt((self.w/2)**2 + (self.h/2)**2)
         theta = np.arctan2(self.h, self.w)
         body_right_corner_loc = (
-            self.x + k * np.cos(self.phi + theta), # TODO: Fix these angles? Should be plus?
+            self.x + k * np.cos(self.phi + theta),
             self.y + k * np.sin(self.phi + theta)
         )
         body_left_corner_loc = (
             self.x - k * np.cos(self.phi + theta),
-            self.y + k * np.sin(self.phi + theta)
+            self.y + k * np.sin(self.phi + np.pi-theta)
         )
-
-        # Create ax + by + c = 0 from corners
-        # slope = (body_right_corner_loc[1] - body_left_corner_loc[1]) / (body_right_corner_loc[0] - body_left_corner_loc[0])
-        # intercept = body_left_corner_loc[1] - slope * body_left_corner_loc[0]
-        # a = 1
-        # b = -1/slope
-        # c = intercept/slope
 
         # https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
         a = body_right_corner_loc[1] - body_left_corner_loc[1]
@@ -138,33 +158,20 @@ class Drone(DroneBody):
 
         d = abs(a * ball.x + b * ball.y + c) / np.sqrt(a**2 + b**2)
 
-        # distance between a point and a line:
+        # distance between a point p and a line:
             # d = abs(a*px + b*py + c)/np.sqrt(a**2 + b**2)
             # given that the line has the equation ax + by + c = 0
         # If the distance - ball radius <=0, then we have hit the drone
+
+        # TODO: add to conditions that the ball.x must also be within x limits of drone
         if d - ball.radius <= 0:
-            return True
+            if (ball.x - ball.radius > body_right_corner_loc[0]) or (ball.x + ball.radius < body_left_corner_loc[0]):
+                return False
+            else:
+                return True
         else:
             return False
-    
-    """ TODO:
-        # Code
-        Finish detect_impact
-        update moment of inertia for original body (done)
-        create function to update MOI after impact (done?)
-        create function that fixes ball to drone body (corresponding function in Ball?)
-        write impulse_response function
-            append this to current datatype? syncing time and state important
-
-        # Data
-        Figure out if data makes sense (Does drone flip upside down?)
-        Generate control plots
-        Generate Force/torque plots
-        Generate ball plot?
-        Simplify the animation to make the drone just a rectangle
-
-    """
-    
+  
     
     def step(self) -> None:
         """ Perform a single movement iteration by updating the state """
@@ -178,16 +185,44 @@ class Drone(DroneBody):
         self.vy = self.state[4]
         self.vphi = self.state[5]
         return
-
-
-    def _get_ball_impact_loc(self):
-        return
     
-    def update_moment_of_inertia(self) -> None:
-        self.Ixx = (1/12) * (2 * self.m * (self.w**2 + self.h**2) + 2 * self.motor_mass * self.L**2) + (2 * self.motor_mass* self.L**2) + ((2/5) * 0.05* 0.03**2)
-        self.Iyy = (1/12) * (2 * self.m * (self.L**2 + self.h**2) + 2 * self.motor_mass * self.w**2) + (2 * self.motor_mass* self.w**2) + ((2/5) * 0.05 * 0.03**2)
-        self.Izz = (1/12) * (2 * self.m * (self.L**2 + self.w**2) + 4 * self.motor_mass* self.h**2) + ((2/5) * 0.05 * 0.03**2)
+    def _update_motor_locs(self) -> None:
+        self.right_motor_loc = [
+            self.x + (self.w + self.L) * np.cos(self.phi),
+            self.y + (self.w + self.L) * np.sin(self.phi)
+        ]
+        self.left_motor_loc = [
+            self.x - (self.w + self.L) * np.cos(self.phi),
+            self.y + (self.w + self.L) * np.sin(self.phi)
+        ]
+        return
 
+    def get_center_of_mass(self, ball: ball.Ball) -> Tuple[float]:
+        self._update_motor_locs()
+        center_of_mass = (
+            ((self.x * self.m) + (self.right_motor_loc[0] * self.motor_mass) + (ball.x * ball.mass)) / (self.m + self.motor_mass + ball.mass),
+            ((self.y * self.m) + (self.right_motor_loc[1] * self.motor_mass) + (ball.y * ball.mass)) / (self.m + self.motor_mass + ball.mass)
+        )
+        return center_of_mass
+    
+    def update_moment_of_inertia(self, ball: ball.Ball) -> None:
+        """ Change the moment of inertia due to the addition of the ball and location, """
+        # TODO: update MOI based on new COM
+        # Double check if this is correct
+        # http://astro1.panet.utoledo.edu/~mheben/PHYS_2130/Chapter11-1_mh.pdf
+        center_of_mass = self.get_center_of_mass(ball=ball)
+        d_self = np.sqrt((self.x - center_of_mass[0])**2 + (self.y - center_of_mass[1])**2)
+        d_ball = np.sqrt((ball.x - center_of_mass[0])**2 + (ball.y - center_of_mass[1])**2)
+        d_motor_r = np.sqrt((self.right_motor_loc[0] - center_of_mass[0])**2 + (self.right_motor_loc[1] - center_of_mass[1])**2)
+        d_motor_l = np.sqrt((self.left_motor_loc[0] - center_of_mass[0])**2 + (self.left_motor_loc[1] - center_of_mass[1])**2)
+
+        self.Izz = (
+            (self.drone_body_Izz + self.m * d_self**2) + 
+            (self.motor_Izz + self.motor_mass * d_motor_r**2) + 
+            (self.motor_Izz + self.motor_mass * d_motor_l**2) +  
+            (ball.Izz + ball.mass * d_ball**2)
+        )
+        return
     
     def get_impulse_resp(
             self,
@@ -200,12 +235,13 @@ class Drone(DroneBody):
 
         self.update_moment_of_inertia()
         self.A, self.B = self.linearize_dynamics() # not sure this is the right dynamics... needs input force on x,y?
-        C = np.zeros((self.B.shape[1], self.B.shape[0]))
+        C = np.identity(6)
         D = 0
         sys = ct.StateSpace(self.A, self.B, C, D)
-        data = ct.impulse_response(sys=sys, T=time)
+        data = ct.impulse_response(sys=sys, T=time, X0=self.state)
 
         return data
+
         
     def simulate(self):
         num_steps = int(5 / self.dt) + 1
